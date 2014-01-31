@@ -1,108 +1,96 @@
-var readability = require('readability-api'),
-    htmlToText = require('html-to-text'),
+var HtmlToText = require('html-to-text'),
     Crawler = require('crawler').Crawler,
-    mongoose = require('mongoose'),
-    async = require('async'),
-    db = mongoose.connection,    
-    /* Models */
-    // Article = require('../tfidf/Article.js'),
-    Parameters = require('./Parameters'),
-    Robot = require('../models/robot.js'),
-    Visit = require('../models/visit.js'),
-    Word = require('../models/word.js');
+    Mongoose = require('mongoose'),
+    Extractor = require('article'),
+    Request = require('request'),
+    DB = Mongoose.createConnection('mongodb://localhost/clustter'),
+    Robot = require('../models/robot.js')(DB)
+    Article = require('../models/article.js')(DB);
 
-console.log('==== Clustter ====');
-mongoose.connect('mongodb://localhost/clustter');
+console.log('Clustter Scraper\n================');
 
-readability.configure({
-  consumer_key: 'waltercarvalho',
-  consumer_secret: 'ygwaQBvUsJkq7GCYfybDxzbAMKfTdnEN',
-  parser_token: '4403e0e378f3ded399e20839ede5cc09b71e350f'
+// Cleaning urls.
+String.prototype.stripQueryAndHash = function () {
+  return this.split("?")[0].split("#")[0];
+}
+
+DB.on('error', console.error.bind(console, 'Connection error: '));
+DB.on('open', console.log.bind(console, 'Connected to DB.'));
+
+var regexp = null;
+var roots = [];
+var scrapedUrls = [];
+
+// // Loading robots and initialising crawler
+Robot.find({}, function (err, robots) {
+  var templates = [];
+
+  robots.forEach(function (robot, key) {
+    
+    robot.template.forEach(function (regex, key) {
+      templates.push(regex.reg);
+    });
+
+    crawler.queue(robot.root);
+    roots.push(robot.root);
+  });
+
+  // creates a single regular expression using the or operator.
+  regexp = new RegExp(templates.join('|'));
 });
 
-// Create a parser object
-var parser = new readability.parser();
+// Need a list from Article's urls so I don't need to scrape it again // Should store it in cache?
+// Article.find({}, function (err, articles) {
+//   if (err) console.log(err);
+//   articles.forEach(function (article) {
+//     console.log(article.wordFrequency);
+//   });
+// });
 
-// Get the Parser confidence level 
-parser.confidence('http://www.bbc.co.uk/news/technology-25316228', function (err, confidence) {
-  if (confidence >= 0.5) {
-    // Parse an article
-    parser.parse('http://www.bbc.co.uk/news/technology-25316228', function (err, parsed) {
-      var text = htmlToText.fromString(parsed.content);
-      console.log(text);
+var crawler = new Crawler({
+  callback: function (err, result, $) {
+
+    var url = this.uri;
+    var toCrawl = [];
+
+    // For each link found in the page
+    $('a').each(function (index, a) {
+      var link = a.href.stripQueryAndHash();
+
+      // if the a.href isn't a substring of any strings in array previousHrefs.indexOf(currentHref) > -1);
+      if (link.match(regexp) && toCrawl.indexOf(link) === -1 && scrapedUrls.push(url)) {
+        // then it should be added to queue for scraping and parsing  
+        toCrawl.push(link);
+      }
+      
     });
+
+    // if the current url isn't a root
+    if (roots.indexOf(url) === -1) {
+
+      // making a request again, bit annoying.
+      Request(url).pipe(Extractor(url, function (err, result) {
+        if (err) throw err;
+
+        var article = new Article ();
+        article.title = result.title;
+        article.story = HtmlToText.fromString(result.text);
+        article.url = url;
+        
+        article.save(function (err, article) {
+          if (err) console.error(err);
+        });
+        // create article here?
+      }));
+
+    }
+
+    scrapedUrls.push(url);
+    crawler.queue(toCrawl);
+  },
+  onDrain: function () {
+    console.log('queue is empty');
+    // process.exit(0); // empty queue
+    // Should trigger the clustering algorithm
   }
 });
-
-db.on('error', console.error.bind(console, 'connection error:'));
-
-db.once('open', function callback () {
-  console.log('database connected @ ' + db.host + ':' + db.port);
-  /* pull words and visited URLs from db */
-  async.parallel([
-    function(callback) {
-      Word.find({}).exec(callback);
-    },
-    function(callback) {
-      Visit.count({}).exec(callback);
-    },
-    function(callback) {
-      Robot.find({}).exec(callback);
-    }], function(err, result) {
-      if (err) throw err;
-      /* initialise scraper */
-      init(result[0], result[1], result[2]);
-    });
-});
-
-/* initialises parameters */
-var init = function (words, visitedCount, robots) {
-  var p = Parameters(words, visitedCount, robots);
-  run(p);
-}
-
-/* run time */
-var run = function (p) {
-  /* crawler */
-  var c = new Crawler({
-    callback: function (err, result, $) {
-      /* uri should not be root and it should match at least one template */
-      if (this.robot.root !== this.uri && matchesAnyTemplate(this.robot.template, this.uri)) {
-        p.status = 'scraping';
-      } else {
-        p.status = 'root';
-      }
-    },
-    onDrain: function () {
-      p.status = 'empty queue';
-      process.exit(0);
-    }
-  });
-
-  /* loading robots */
-  p.robots.forEach(function (robot) {
-    /* add uri and robot to crawler's queue */
-    c.queue({
-      'uri': robot.root,
-      'robot': robot
-    });
-  });
-
-  // p.print();
-  setInterval(function() {
-    p.print();
-  }, 1);
-}
-
-var printStats = function (p) {
-  process.stdout.write('')
-}
-
-var matchesAnyTemplate = function (template, url) {
-  var result = false;
-  template.forEach(function (re) {
-    var pattern = new RegExp(re.reg);
-    if (pattern.test(url)) { return result = true; }
-  });
-  return result;
-}

@@ -14,7 +14,7 @@ function Article (story) {
   a.uri = null;
   a.vector = [];
   a.wordFrequency = {};
-  a.wordCount = a.story.toLowerCase().split(/[\s_():.!?,;"']+/).length;;
+  a.wordCount = a.story.toLowerCase().split(/[\s_():.!?,;"']+/).length;
   a.calculateWordFrequency();
   return a;
 };

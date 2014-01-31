@@ -24,12 +24,13 @@
   "devDependencies": {
     "express": "3.x",
     "natural": "~0.1.24",
-    "cheerio": "~0.12.3",
-    "kmeans-js": "~0.1.2",
     "crawler": "~0.2.5",
     "html-to-text": "0.0.6",
-    "readability-api": "~0.3.0",
     "mongoose": "~3.8.1",
     "async": "~0.2.9"
+  },
+  "dependencies": {
+    "article": "~1.0.0",
+    "request": "~2.33.0"
   }
 }
