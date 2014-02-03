@@ -9,19 +9,38 @@ var HtmlToText = require('html-to-text'),
 
 console.log('Clustter Scraper\n================');
 
-// Cleaning urls.
-String.prototype.stripQueryAndHash = function () {
-  return this.split("?")[0].split("#")[0];
-}
+require('dns').resolve('www.google.com', function(err) {
+  if (err) {
+    log('no internet connection');
+    process.exit(0);
+  }
+});
 
-DB.on('error', console.error.bind(console, 'Connection error: '));
-DB.on('open', console.log.bind(console, 'Connected to DB.'));
-
+var log_mode = true;
+var threshold = 200;
 var regexp = null;
 var roots = [];
-var scrapedUrls = [];
+var scraped = [], visited = [];
 
-// // Loading robots and initialising crawler
+// cleans url query strings and same page anchors
+String.prototype.stripQueryAndHash = function () {
+
+  return this.split('?')[0].split('#')[0];
+}
+
+function log (message) {
+  if (log_mode) {
+    process.stdout.clearLine();
+    process.stdout.cursorTo(0);
+    process.stdout.write(roots.length + ' robots, ' + scraped.length + ' articles, ' + visited.length + ' visited urls, ' + 'status: ' + message);
+  }
+  return;
+}
+
+DB.on('error', console.error.bind(console, 'database connection error '));
+DB.on('open', function() { log('connected to database') });
+
+log('loading robots');
 Robot.find({}, function (err, robots) {
   var templates = [];
 
@@ -39,58 +58,59 @@ Robot.find({}, function (err, robots) {
   regexp = new RegExp(templates.join('|'));
 });
 
-// Need a list from Article's urls so I don't need to scrape it again // Should store it in cache?
-// Article.find({}, function (err, articles) {
-//   if (err) console.log(err);
-//   articles.forEach(function (article) {
-//     console.log(article.wordFrequency);
-//   });
-// });
+log('loading articles');
+Article.find({}, function (err, articles) {
+  if (err) console.log(err);
+  articles.forEach(function (article) {
+    scraped.push(article.url);
+  });
+});
 
 var crawler = new Crawler({
   callback: function (err, result, $) {
-
     var url = this.uri;
     var toCrawl = [];
 
-    // For each link found in the page
+
+    log('scraping links')
     $('a').each(function (index, a) {
       var link = a.href.stripQueryAndHash();
+      // if it matches the link structure and is not already on the queue and it hasn't been visited yet
+      if (link.match(regexp) && toCrawl.indexOf(link) === -1 && visited.indexOf(link) === -1) {
+        // then it should be added to queue for scraping and parsing
 
-      // if the a.href isn't a substring of any strings in array previousHrefs.indexOf(currentHref) > -1);
-      if (link.match(regexp) && toCrawl.indexOf(link) === -1 && scrapedUrls.push(url)) {
-        // then it should be added to queue for scraping and parsing  
         toCrawl.push(link);
       }
-      
     });
 
     // if the current url isn't a root
     if (roots.indexOf(url) === -1) {
 
-      // making a request again, bit annoying.
-      Request(url).pipe(Extractor(url, function (err, result) {
-        if (err) throw err;
+      visited.push(url);
 
+      // making a request again, bit annoying
+      Request(url).pipe(Extractor(url, function (err, result, cb) {
+        if (err) log(err);
+        log('scraping article');
         var article = new Article ();
         article.title = result.title;
         article.story = HtmlToText.fromString(result.text);
         article.url = url;
         
         article.save(function (err, article) {
-          if (err) console.error(err);
+          if (err)
+            log(err);
+          else
+            scraped.push(article.url);
         });
-        // create article here?
-      }));
-
+      })); 
     }
 
-    scrapedUrls.push(url);
+    log("adding to queue");
     crawler.queue(toCrawl);
   },
   onDrain: function () {
-    console.log('queue is empty');
-    // process.exit(0); // empty queue
+    log('queue is empty');
     // Should trigger the clustering algorithm
   }
 });

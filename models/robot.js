@@ -21,7 +21,7 @@ function RobotSchema () {
 
 // var guardian = Robot();
 // guardian.root =  "http://www.theguardian.com/uk";
-// guardian.template = [{ reg: 'http://www.theguardian.com/[a-z]+[a-z0-9/]+.*' }];
+// guardian.template = [{ reg: 'http://www.theguardian.com/(?!preference|help|edition|advertising|info|gpc|theguardian|gnm-press-office|archive|weekly|tone|video)[a-z/]+[a-z0-9]+.*' }];
 
 // guardian.save(function (err, doc) {
 //   console.log(doc);
