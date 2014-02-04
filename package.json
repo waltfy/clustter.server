@@ -31,6 +31,7 @@
   },
   "dependencies": {
     "article": "~1.0.0",
-    "request": "~2.33.0"
+    "request": "~2.33.0",
+    "keyword-extractor": "0.0.7"
   }
 }

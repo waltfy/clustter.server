@@ -2,6 +2,7 @@ var HtmlToText = require('html-to-text'),
     Crawler = require('crawler').Crawler,
     Mongoose = require('mongoose'),
     Extractor = require('article'),
+    Keywords = require("keyword-extractor"),
     Request = require('request'),
     DB = Mongoose.createConnection('mongodb://localhost/clustter'),
     Robot = require('../models/robot.js')(DB)
@@ -24,7 +25,6 @@ var scraped = [], visited = [];
 
 // cleans url query strings and same page anchors
 String.prototype.stripQueryAndHash = function () {
-
   return this.split('?')[0].split('#')[0];
 }
 
@@ -44,14 +44,10 @@ log('loading robots');
 Robot.find({}, function (err, robots) {
   var templates = [];
 
-  robots.forEach(function (robot, key) {
-    
-    robot.template.forEach(function (regex, key) {
-      templates.push(regex.reg);
-    });
-
-    crawler.queue(robot.root);
+  robots.forEach(function (robot, key) {    
+    templates.push(robot.template);
     roots.push(robot.root);
+    crawler.queue(robot.root);
   });
 
   // creates a single regular expression using the or operator.
@@ -71,14 +67,12 @@ var crawler = new Crawler({
     var url = this.uri;
     var toCrawl = [];
 
-
     log('scraping links')
     $('a').each(function (index, a) {
       var link = a.href.stripQueryAndHash();
       // if it matches the link structure and is not already on the queue and it hasn't been visited yet
-      if (link.match(regexp) && toCrawl.indexOf(link) === -1 && visited.indexOf(link) === -1) {
+      if (link.match(regexp) && toCrawl.indexOf(link) === -1 && visited.indexOf(link) === -1 && scraped.indexOf(link) === -1) {
         // then it should be added to queue for scraping and parsing
-
         toCrawl.push(link);
       }
     });
@@ -86,24 +80,34 @@ var crawler = new Crawler({
     // if the current url isn't a root
     if (roots.indexOf(url) === -1) {
 
-      visited.push(url);
-
-      // making a request again, bit annoying
-      Request(url).pipe(Extractor(url, function (err, result, cb) {
-        if (err) log(err);
-        log('scraping article');
-        var article = new Article ();
-        article.title = result.title;
-        article.story = HtmlToText.fromString(result.text);
-        article.url = url;
-        
-        article.save(function (err, article) {
-          if (err)
-            log(err);
-          else
-            scraped.push(article.url);
-        });
-      })); 
+      // TODO: avoid making another request.
+      Request(url)
+        .on('error', function (error) {
+          log(error);
+          // crawler.queue(url);
+        })
+        .on('response', function (response) {
+          visited.push(url);
+        })
+        .pipe(
+          Extractor(url, function (err, result) {
+              if (err) console.log(err);
+              log('scraping article');
+              
+              var article = new Article ();
+              article.title = result.title;
+              article.story = HtmlToText.fromString(result.text);
+              article.token = Article.tokenise(article.story);
+              article.wordFrequency = Article.wordFrequency(article.token);
+              article.tags = Keywords.extract(article.story, { language: 'english', return_changed_case: true });
+              article.url = url;
+              
+              article.save(function (err, article) {
+                if (err) console.log(err);
+                else scraped.push(article.url);
+              });
+          })
+        ); 
     }
 
     log("adding to queue");

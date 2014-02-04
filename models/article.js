@@ -4,15 +4,17 @@ module.exports = function (db) {
 
 function ArticleSchema () {
 
-  var Schema = require('mongoose').Schema;
-  var Natural = require('natural');
+  var Schema = require('mongoose').Schema,
+      Natural = require('natural');
       Natural.PorterStemmer.attach();
-
 
   ArticleSchema = new Schema({
     title: {type: String, required: true},
     story: { type: String, required: true },
     url: { type: String, required: true, index: {unique: true} },
+    token: { type : Array , default: [] },
+    wordFrequency: {},
+    tags: { type : Array , default: [] },
     updated: { type: Date, default: Date.now }
   });
 
@@ -22,26 +24,24 @@ function ArticleSchema () {
       return this.story.match(/\S+/g).length;
     });
 
+  // Methods
+
   // Tokenises and stems the article
-  ArticleSchema.virtual('token')
-    .get(function () {
-      return this.story.tokenizeAndStem();
+  ArticleSchema.statics.tokenise = function (story) {
+    return story.tokenizeAndStem();
+  };
+
+  // // Calcuates the word frequency.
+  ArticleSchema.statics.wordFrequency = function (token) {
+    var wordFrequency = {};
+
+    token.forEach(function (word) {
+      if (wordFrequency.hasOwnProperty(word)) wordFrequency[word]++;
+      else wordFrequency[word] = 1;
     });
 
-  // Calcuates the word frequency.
-  ArticleSchema.virtual('wordFrequency')
-    .get(function () {
-      var wordFrequency = {};
-      
-      this.token.forEach(function (word) {
-        if (wordFrequency.hasOwnProperty(word))
-          wordFrequency[word]++;
-        else 
-          wordFrequency[word] = 1;
-      });
-
-      return wordFrequency;
-    });
+    return wordFrequency;
+  }
 
   return ArticleSchema;
 }

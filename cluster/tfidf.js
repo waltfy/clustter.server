@@ -34,7 +34,7 @@ TFIDF.idf = function (word, articlesList) {
   * articleList - all of the documents in the vocabulary.
   * Returns count of documents.
   */
-TFIDF.numArticlesContaining = function(word, articlesList) {
+TFIDF.numArticlesContaining = function (word, articlesList) {
   // Count of articles containing the word.
   var count = 0;
   // Iterate through articles.
