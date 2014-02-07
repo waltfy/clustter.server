@@ -6,7 +6,8 @@ var HtmlToText = require('html-to-text'),
     Request = require('request'),
     DB = Mongoose.createConnection('mongodb://localhost/clustter'),
     Robot = require('../models/robot.js')(DB)
-    Article = require('../models/article.js')(DB);
+    Article = require('../models/article.js')(DB),
+    Dictionary =  require('../models/dictionary.js')(DB);
 
 console.log('Clustter Scraper\n================');
 
@@ -17,12 +18,7 @@ require('dns').resolve('www.google.com', function(err) {
   }
 });
 
-var log_mode = true;
-var threshold = 200;
-var regexp = null;
-var roots = [];
-var scraped = [], visited = [];
-
+// TODO: move this out.
 // cleans url query strings and same page anchors
 String.prototype.stripQueryAndHash = function () {
   return this.split('?')[0].split('#')[0];
@@ -39,6 +35,14 @@ function log (message) {
 
 DB.on('error', console.error.bind(console, 'database connection error '));
 DB.on('open', function() { log('connected to database') });
+
+// locals
+var log_mode = true;
+var threshold = 200;
+var regexp = null;
+var roots = [];
+var scraped = [], visited = [];
+var articles = [];
 
 log('loading robots');
 Robot.find({}, function (err, robots) {
@@ -93,18 +97,23 @@ var crawler = new Crawler({
           Extractor(url, function (err, result) {
               if (err) console.log(err);
               log('scraping article');
-              
+
               var article = new Article ();
               article.title = result.title;
               article.story = HtmlToText.fromString(result.text);
               article.token = Article.tokenise(article.story);
-              article.wordFrequency = Article.wordFrequency(article.token);
+              article.wordFrequency = Article.getWordFrequency(article.token);
+              article.wordCount = article.token.length //article.story.match(/\S+/g).length; which one to use?
               article.tags = Keywords.extract(article.story, { language: 'english', return_changed_case: true });
               article.url = url;
               
               article.save(function (err, article) {
                 if (err) console.log(err);
-                else scraped.push(article.url);
+                else {
+                  scraped.push(article.url);
+                  log('scraped')
+                  Dictionary.documentFrequency(article);
+                }
               });
           })
         ); 
@@ -115,6 +124,6 @@ var crawler = new Crawler({
   },
   onDrain: function () {
     log('queue is empty');
-    // Should trigger the clustering algorithm
+    // Should trigger the clustering algorithm queue is empty: true
   }
 });

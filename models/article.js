@@ -8,23 +8,16 @@ function ArticleSchema () {
       Natural = require('natural');
       Natural.PorterStemmer.attach();
 
-  ArticleSchema = new Schema({
+  var ArticleSchema = new Schema({
     title: {type: String, required: true},
     story: { type: String, required: true },
     url: { type: String, required: true, index: {unique: true} },
     token: { type : Array , default: [] },
     wordFrequency: {},
+    wordCount: { type: Number, default: 0 },
     tags: { type : Array , default: [] },
     updated: { type: Date, default: Date.now }
   });
-
-  // Counts how many words there are in the article
-  ArticleSchema.virtual('wordCount')
-    .get(function () {
-      return this.story.match(/\S+/g).length;
-    });
-
-  // Methods
 
   // Tokenises and stems the article
   ArticleSchema.statics.tokenise = function (story) {
@@ -32,7 +25,7 @@ function ArticleSchema () {
   };
 
   // // Calcuates the word frequency.
-  ArticleSchema.statics.wordFrequency = function (token) {
+  ArticleSchema.statics.getWordFrequency = function (token) {
     var wordFrequency = {};
 
     token.forEach(function (word) {

@@ -1,78 +1,99 @@
-var TFIDF = require('./tfidf'),
-    Mongoose = require('mongoose'),
+var Mongoose = require('mongoose'),
     DB = Mongoose.createConnection('mongodb://localhost/clustter'),
+    async = require('async'),
     Article = require('../models/article.js')(DB);
+    Dictionary = require('../models/dictionary.js')(DB);
 
-// var articleList = [];
-// var dictionary = {};
+console.log('Clustter Aggregator\n================');
 
-function log (message) {
-  process.stdout.clearLine();
-  process.stdout.cursorTo(0);
-  process.stdout.write('[Clustter]: ' + message);
-  return;
-}
+Math.dotProduct = function (v1, v2) {
+  var dot = 0, min = Math.min(Object.keys(v1).length, Object.keys(v2).length);
 
-log('loading articles');
-Article.find({}, function (err, articles) {
-  if (err) console.log(err);  
-  else computeDictionary(articles);
-});
+  for (word in v1) {
+    var value = v2[word] || 0;
+    dot += v1[word] * value;
+  }
 
-var computeDictionary = function (articles) {
-  log('computing dictionary');
-  var dictionary = {};
+  return dot;
+};
+
+Math.magnitude = function (v) {
+
+  return Math.sqrt(Math.dotProduct(v, v));
+};
+
+Math.cosineSimilarity = function (v1, v2) {
+  var dotProduct = Math.dotProduct(v1, v2),
+      mag1 = Math.magnitude(v1);
+      mag2 = Math.magnitude(v2);
+      result = dotProduct / (mag1 * mag2);
+
+  if (isNaN(result)) {
+    return 0;
+  } else {
+   return result;
+  }
+};
+
+console.log('loading articles and dictionary...');
+async.parallel([
+    function (callback) {
+      // Get list of articles.
+      Article.find({}, function (err, articles) {
+        callback(err, articles);
+      });
+    },
+    function (callback) {
+      // Get list of words and convert to a hashmap.
+      Dictionary.find({}, function (err, dictionary) {
+        var result = {};
+        dictionary.forEach(function (item) {
+          result[item.word] = item.documentFrequency;
+        });
+        callback(err, result);
+      });
+    }
+  ],
+  function (err, results) {
+    console.log('done.');
+    computeVectors({articles: results[0], dictionary: results[1]});
+  }
+);
+
+var computeVectors = function (args) {
+  console.log('computing vectors...');
+  var vectors = {};
 
   var start = new Date().getTime();
-  articles.forEach(function (article) {
-    // console.log(article.wordFrequency);
-    var test = article.story;
+  args.articles.forEach(function (article, index) {
+    var vector = {};
+
     for (word in article.wordFrequency) {
-      if (!dictionary.hasOwnProperty(word))
-        dictionary[word] = Object.keys(dictionary).length;
+      vector[word] = (article.wordFrequency[word] / article.wordCount) * Math.log(args.articles.length / args.dictionary[word]);
     }
+
+    vectors[article._id] = {vector: vector, url: article.url };
+    // TODO: update article vectors;
   });
   var end = new Date().getTime();
 
-  log('completed in ' + (end - start) + 'ms');
+  console.log('done in ' + (end - start) + 'ms.');
 
-  // console.log(dictionary);
-
-  // computeTFIDF(articles, dictionary);
+  computeSimilarityMatrix(vectors);
 };
 
-var computeTFIDF = function (articles, dictionary) {
-  log('computing TFIDF');
+var computeSimilarityMatrix = function (vectors) {
 
-  articles.forEach(function (article) {
-    
-    article.vector = new Array(Object.keys(dictionary).length + 1).join('0').split('').map(parseFloat);
-
-    for (word in article.wordFrequency) {
-      if(dictionary[word] === undefined)
-        console.log(word);
-      article.vector[dictionary[word]] = TFIDF.run(word, article, articles);
+  for (a in vectors) {
+    console.log(vectors[a].url);
+    for (b in vectors) {
+      if (a === b) break;
+      var cosine = Math.cosineSimilarity(vectors[a].vector, vectors[b].vector);
+      if (cosine >= 0.3)
+        console.log('\t', vectors[b].url, ' is ' + cosine * 100 + ' similar.');
+      // console.log(Math.cosineSimilarity(vectors[a].vector, vectors[b].vector) + ', ' + b);
     }
-
-    console.log(article.vector);
-  });
+    console.log('');
+  }
 
 };
-
-/* Running TFIDF on list of articles and setting vectors */
-
-
-// vocabulary.articleList.forEach(function (article) {
-//   // For every word process the tf-idf
-//   article.vector = new Array(Object.keys(vocabulary.dictionary).length + 1).join('0').split('').map(parseFloat);
-//   for (word in article.wordFrequency) {
-//     if(vocabulary.getWordPosition(word) == undefined)
-//       console.log(word);
-//     article.vector[vocabulary.getWordPosition(word)] = TFIDF.run(word, article, vocabulary.articleList);
-//   }
-// });
-
-// var start = new Date().getTime();
-// var end = new Date().getTime();
-
-// console.log('Process Completed in ' + (end - start) + 'ms');
