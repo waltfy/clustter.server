@@ -88,7 +88,7 @@ var crawler = new Crawler({
       Request(url)
         .on('error', function (error) {
           log(error);
-          // crawler.queue(url);
+          crawler.queue(url);
         })
         .on('response', function (response) {
           visited.push(url);

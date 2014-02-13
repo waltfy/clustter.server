@@ -5,6 +5,7 @@
 // aggregator = require('aggregator'), // aggregator
 // summarizer = require('summarizer'); // summarizer
 
+// define all main thresholds necessary
 // load necessary models to initialise application
 
 // initialise scraper.
