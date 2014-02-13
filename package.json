@@ -21,17 +21,15 @@
   "bugs": {
     "url": "https://github.com/waltervascarvalho/clustter/issues"
   },
-  "devDependencies": {
+  "dependencies": {
+    "article": "~1.0.0",
+    "request": "~2.33.0",
+    "keyword-extractor": "0.0.7",
     "express": "3.x",
     "natural": "~0.1.24",
     "crawler": "~0.2.5",
     "html-to-text": "0.0.6",
     "mongoose": "~3.8.1",
     "async": "~0.2.9"
-  },
-  "dependencies": {
-    "article": "~1.0.0",
-    "request": "~2.33.0",
-    "keyword-extractor": "0.0.7"
   }
 }

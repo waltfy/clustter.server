@@ -95,26 +95,25 @@ var crawler = new Crawler({
         })
         .pipe(
           Extractor(url, function (err, result) {
-              if (err) console.log(err);
-              log('scraping article');
+            log('scraping article');
 
-              var article = new Article ();
-              article.title = result.title;
-              article.story = HtmlToText.fromString(result.text);
-              article.token = Article.tokenise(article.story);
-              article.wordFrequency = Article.getWordFrequency(article.token);
-              article.wordCount = article.token.length //article.story.match(/\S+/g).length; which one to use?
-              article.tags = Keywords.extract(article.story, { language: 'english', return_changed_case: true });
-              article.url = url;
-              
-              article.save(function (err, article) {
-                if (err) console.log(err);
-                else {
-                  scraped.push(article.url);
-                  log('scraped')
-                  Dictionary.documentFrequency(article);
-                }
-              });
+            var article = new Article();
+            article.title = result.title;
+            article.story = HtmlToText.fromString(result.text);
+            article.token = Article.tokenise(article.story);
+            article.wordFrequency = Article.getWordFrequency(article.token);
+            article.wordCount = article.token.length //article.story.match(/\S+/g).length; which one to use?
+            article.tags = Keywords.extract(article.story, { language: 'english', return_changed_case: true });
+            article.url = url;
+            
+            article.save(function (err, article) {
+              if (err) console.log(err);
+              else {
+                scraped.push(article.url);
+                log('scraped')
+                Dictionary.documentFrequency(article);
+              }
+            });
           })
         ); 
     }

@@ -1,3 +1,4 @@
+// dbscan
 var Mongoose = require('mongoose'),
     DB = Mongoose.createConnection('mongodb://localhost/clustter'),
     async = require('async'),
@@ -35,16 +36,17 @@ Math.cosineSimilarity = function (v1, v2) {
   }
 };
 
-console.log('loading articles and dictionary...');
 async.parallel([
     function (callback) {
       // Get list of articles.
+      console.log('loading articles...');
       Article.find({}, function (err, articles) {
         callback(err, articles);
       });
     },
     function (callback) {
       // Get list of words and convert to a hashmap.
+      console.log('loading dictionary...');
       Dictionary.find({}, function (err, dictionary) {
         var result = {};
         dictionary.forEach(function (item) {
@@ -53,11 +55,11 @@ async.parallel([
         callback(err, result);
       });
     }
-  ],
-  function (err, results) {
-    console.log('done.');
-    computeVectors({articles: results[0], dictionary: results[1]});
-  }
+    ],
+    function (err, results) {
+      console.log('done.');
+      computeVectors({articles: results[0], dictionary: results[1]});
+    }
 );
 
 var computeVectors = function (args) {
@@ -69,6 +71,8 @@ var computeVectors = function (args) {
     var vector = {};
 
     for (word in article.wordFrequency) {
+      if (args.dictionary[word] === undefined)
+        console.log('[WARN]:', word, '-', 'not in dictionary');
       vector[word] = (article.wordFrequency[word] / article.wordCount) * Math.log(args.articles.length / args.dictionary[word]);
     }
 
@@ -79,21 +83,42 @@ var computeVectors = function (args) {
 
   console.log('done in ' + (end - start) + 'ms.');
 
-  computeSimilarityMatrix(vectors);
+  // computeSimilarityMatrix(vectors);
 };
 
 var computeSimilarityMatrix = function (vectors) {
 
-  for (a in vectors) {
-    console.log(vectors[a].url);
-    for (b in vectors) {
-      if (a === b) break;
-      var cosine = Math.cosineSimilarity(vectors[a].vector, vectors[b].vector);
-      if (cosine >= 0.3)
-        console.log('\t', vectors[b].url, ' is ' + cosine * 100 + ' similar.');
-      // console.log(Math.cosineSimilarity(vectors[a].vector, vectors[b].vector) + ', ' + b);
+
+  var matrix = {};
+  var count = 0;
+  
+  var start = new Date().getTime();
+  for (id1 in vectors) {
+
+    matrix[id1] = {};
+
+    for (id2 in vectors) {
+      var similiarity = 0;
+
+      if (matrix[id2] !== undefined && matrix[id2].hasOwnProperty(id1)) {
+        similiarity = matrix[id2][id1];
+      } else if (id1 === id2) {
+        similiarity = 1;
+      } else {
+        count++;
+        similiarity = Math.cosineSimilarity(vectors[id1].vector, vectors[id2].vector);
+
+      }
+
+      matrix[id1][id2] = similiarity;    
+
+    //   // console.log('\t', vectors[id2].url, ' is ' + cosine * 100 + ' similar.');
+    //   // console.log(Math.cosineSimilarity(vectors[id1].vector, vectors[id2].vector) + ', ' + id2);
     }
-    console.log('');
   }
 
+  var end = new Date().getTime();
+
+  // console.log('Calculated comparison matrix for', Object.keys(matrix).length, 'articles in:', (end - start), 'ms.');
+  // console.log('Performed', count, 'operations.');
 };

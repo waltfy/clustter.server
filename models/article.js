@@ -2,6 +2,7 @@ module.exports = function (db) {
   return db.model('Article', ArticleSchema());
 }
 
+// article schema
 function ArticleSchema () {
 
   var Schema = require('mongoose').Schema,
@@ -21,6 +22,7 @@ function ArticleSchema () {
 
   // Tokenises and stems the article
   ArticleSchema.statics.tokenise = function (story) {
+
     return story.tokenizeAndStem();
   };
 

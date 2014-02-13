@@ -2,6 +2,7 @@ module.exports = function (db) {
   return db.model('Robot', RobotSchema());
 }
 
+// robot schema
 function RobotSchema () {
   var Schema = require('mongoose').Schema;
 
