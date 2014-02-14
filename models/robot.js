@@ -14,7 +14,7 @@ function RobotSchema () {
 
 // var bbc = new Robot();
 // bbc.root = "http://www.bbc.co.uk/news/";
-// bbc.template = 'http://www.bbc.co.uk/news/(?!#)[^-]+([^w]+-[0-9\s]*|-[0-9\s]0-9)'
+// bbc.template = 'http://www.bbc.co.uk/news/(?!in-pictures)[^-]+([^w]+-[0-9s]*|-[0-9s]0-9)'
 
 // bbc.save(function (err, doc) {
 //   console.log(doc);

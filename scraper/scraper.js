@@ -1,3 +1,20 @@
+// var util = require('util');
+// var EventEmitter = require('events').EventEmitter;
+
+// // scraper object
+// var Scraper = function () {
+
+//   EventEmitter.call(this); // Calling EventEmitter constructor.
+// }
+// util.inherits(Scraper, EventEmitter);
+
+// methods
+// Scraper.prototype.init = function () {};
+// Scraper.prototype.run = function () {};
+
+// myScraper.emit('done');
+// module.exports = myScraper;
+
 var HtmlToText = require('html-to-text'),
     Crawler = require('crawler').Crawler,
     Mongoose = require('mongoose'),
