@@ -40,8 +40,8 @@ var DBScan = function (args) {
   obj.data = args.data;
   obj.eps = args.eps;
   obj.minPoints = args.minPoints;
-  obj.visitedList = [];
-  obj.resultList = {};
+  obj.visited = [];
+  obj.clusters = {};
 
   return obj;
 };
@@ -53,43 +53,47 @@ DBScan.prototype.run = function (callback) {
 
   var self = this;
 
+  var c = 0;
+
   // for each document in the data set
   for (var doc in this.data) {
-    
-    if (this.visitedList.indexOf(doc) === -1) {
-      this.visitedList.push(doc); // visiting
+    if (!this.isVisited(doc)) {
+      this.visited.push(doc); // visiting
 
       var neighbours = this.getNeighbours(doc); // get its neighbours
 
-      if (neighbours.length >= this.minPoints) {
-
-        neighbours.forEach(function (neighbour) {
-
-          if (self.visitedList.indexOf(neighbour) === -1) {
-            self.visitedList.push(neighbour);
-
-            var neighbours_new = self.getNeighbours(neighbour);
-
-            if (neighbours_new.length >= self.minPoints) {
-              // console.log('concatenating')
-              // console.log('n1', neighbours);
-              // console.log('with');
-              // console.log('n2', neighbours_new);
-              neighbours = self.merge(neighbours, neighbours_new);
-              // console.log('result', neighbours);
-              // console.log('=========');
-            } 
-            
-          }
-        });
-        
-        this.resultList[get.ObjectId()] = neighbours;
+      if (neighbours.length === 0) { // has no neighbours
+        c++;
+        this.clusters[c] = [doc]; // initialise cluster on its own
+      } else {
+        c++;
+        this.expandCluster(doc, neighbours, c);
       }
     }
   }
+
   var end = new Date().getTime();
   console.log('done in ' + (end - start) + 'ms.');
-  callback(null, this.resultList);
+  callback(null, this.clusters);
+};
+
+DBScan.prototype.isVisited = function (doc) {
+  return (this.visited.indexOf(doc) === -1) ? false : true;
+};
+
+DBScan.prototype.expandCluster = function (doc, neighbours, cluster) {
+  this.clusters[cluster] = [doc]; // adding doc to cluster
+  
+  for (n in neighbours) {
+    if (!this.isVisited(neighbours[n])) {
+      this.visited.push(neighbours[n]);
+      var neighboursNew = this.getNeighbours(neighbours[n]);
+      if (neighboursNew.length >= this.minPoints)
+        neighbours = this.merge(neighbours, neighboursNew);
+    }
+  }
+
+  this.clusters[cluster] = neighbours;
 };
 
 DBScan.prototype.getNeighbours = function (a) {

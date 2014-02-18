@@ -45,13 +45,16 @@ var computeVectors = function (args) {
     var vector = {};
 
     for (word in article.wordFrequency) {
-      if (args.dictionary[word] === undefined)
+      
+      if (args.dictionary[word] === undefined) {
         console.log('[WARN]:', word, '-', 'not in dictionary'); // need to handle it better
+      }
+        
       vector[word] = (article.wordFrequency[word] / article.wordCount) * Math.log(args.articles.length / args.dictionary[word]);
     }
 
     vectors[article._id] = {vector: vector, url: article.url };
-    // TODO: update article vectors;
+
   });
 
   var end = new Date().getTime();  // benchmarking
@@ -61,6 +64,7 @@ var computeVectors = function (args) {
 
   dbscan.run(function (err, result) {
     console.log('result');
+    console.log(Object.keys(result).length);
     for (cluster in result) {
       console.log('cluster', cluster);
       result[cluster].forEach(function (doc) {

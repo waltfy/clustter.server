@@ -2,7 +2,6 @@
 
 // dependencies
 var async = require('async'),
-    Request = require('request'),
     Mongoose = require('mongoose'),    
     DB = Mongoose.createConnection('mongodb://localhost/clustter'),
     Robot = require('./models/robot.js')(DB)
@@ -44,7 +43,7 @@ async.parallel([
   }],
   function (err, results) {
     console.log('loaded robots & articles');
-    scraper.init({ articles: results[0], robots: results[1] }); // initialising scraper
+    scraper.init({ articles: results[0], robots: results[1], Article: Article, Dictionary: Dictionary }); // initialising scraper
   }
 );
 
@@ -53,8 +52,8 @@ async.parallel([
   module.on('log', log);
 });
 
-scraper.on('article:new', function (article) {
-  console.log(article);
+scraper.on('article:new', function (data) {
+  log('new article', data);
 });
 
 // aggregator.on('done', function () {

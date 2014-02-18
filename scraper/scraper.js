@@ -2,6 +2,13 @@
 var util = require('util');
 var EventEmitter = require('events').EventEmitter;
 
+// scraper dependencies
+var HtmlToText = require('html-to-text'),
+    Crawler = require('crawler').Crawler,
+    Extractor = require('article'),
+    Keywords = require("keyword-extractor"),
+    Request = require('request');
+
 var Scraper = function () {
   if (!(this instanceof Scraper)) return new Scraper(); // unsure about this?
   EventEmitter.call(this); // Calling EventEmitter constructor.
@@ -10,20 +17,13 @@ var Scraper = function () {
   this.roots = new Array();
   this.visited = new Array();
   this.scraped = new Array();
-}
+};
 
 util.inherits(Scraper, EventEmitter);
 
-// scraper dependencies
-var HtmlToText = require('html-to-text'),
-    Crawler = require('crawler').Crawler,
-    Extractor = require('article'),
-    Keywords = require("keyword-extractor"),
-    Request = require('request');
-
 String.prototype.stripQueryAndHash = function () {
   return this.split('?')[0].split('#')[0];
-}
+};
 
 Scraper.prototype.checkConnection = function () {
   var connection = true;
@@ -35,7 +35,6 @@ Scraper.prototype.checkConnection = function () {
       // process.exit(0);
     }
   });
-  console.log('connected:', connection);
   return connection;
 };
 
@@ -47,11 +46,13 @@ Scraper.prototype.init = function (args) {
     self.roots.push(robot.root);
   });
 
-  this.template = new RegExp(this.template.join('|')); // creates a single regular expression using the or operator.
-
   args.articles.forEach(function (article) { // load configs from articles
     self.scraped.push(article.url);
   });
+
+  this.Article = args.Article;
+  this.Dictionary = args.Dictionary;
+  this.template = new RegExp(this.template.join('|')); // creates a single regular expression using the or operator.
 
   if (this.checkConnection()) // if we have internet connection we can run
     this.run();
@@ -75,15 +76,10 @@ Scraper.prototype.run = function () {
         }
       });
 
-      // if the current url isn't a root
-      if (self.roots.indexOf(url) === -1) {
-
-
-        // TODO: avoid making another request.
-        Request(url)
+      if (self.roots.indexOf(url) === -1) { // if the current url isn't a root
+        Request(url) // TODO: avoid making another request?
           .on('error', function (error) {
-            // log(error);
-            crawler.queue(url);
+            crawler.queue(url); // couldn't parse the article
           })
           .on('response', function (response) {
             self.emit('log', 'scraping article');
@@ -91,33 +87,29 @@ Scraper.prototype.run = function () {
           })
           .pipe(
             Extractor(url, function (err, result) {
-
-              var article = {};
-              article.text = HtmlToText.fromString(result.text);
-              article.tags = Keywords.extract(result.text, { language: 'english', return_changed_case: true });
+              
+              var article = new Article();
+              article.title = result.title;
+              article.story = HtmlToText.fromString(result.text);
+              article.token = Article.tokenise(article.story);
+              article.wordFrequency = Article.getWordFrequency(article.token);
+              article.wordCount = article.token.length //article.story.match(/\S+/g).length; which one to use?
+              article.tags = Keywords.extract(article.story, { language: 'english', return_changed_case: true });
               article.url = url;
 
-              self.emit('article:new', article);
-
-              // var article = new Article();
-              // article.title = result.title;
-              // article.story = HtmlToText.fromString(result.text);
-              // article.token = Article.tokenise(article.story);
-              // article.wordFrequency = Article.getWordFrequency(article.token);
-              // article.wordCount = article.token.length //article.story.match(/\S+/g).length; which one to use?
-              // article.tags = Keywords.extract(article.story, { language: 'english', return_changed_case: true });
-              // article.url = url;
+              self.scraped.push(article.url);
               
-              // article.save(function (err, article) {
-              //   if (err) console.log(err);
-              //   else {
-              //     self.scraped.push(article.url);
-              //     console.log('scraped');
-              //     // Dictionary.documentFrequency(article);
-              //   }
-              // });
+              article.save(function (err, article) {
+                if (err) console.log(err);
+                else {
+                  console.log('should call Dictionary');
+                  Dictionary.documentFrequency(article);
+                  console.log('new article completely processed');
+                  // self.emit('article:new', article._id);
+                }
+              });
             })
-          ); 
+          );
       }
 
       self.emit('log', 'adding to queue');
