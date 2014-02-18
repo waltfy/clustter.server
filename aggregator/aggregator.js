@@ -39,6 +39,7 @@ var computeVectors = function (args) {
   var vectors = {};
 
   var start = new Date().getTime(); // benchmarking
+
   // representing each document as a vector
   args.articles.forEach(function (article, index) {
     var vector = {};
@@ -52,20 +53,20 @@ var computeVectors = function (args) {
     vectors[article._id] = {vector: vector, url: article.url };
     // TODO: update article vectors;
   });
+
   var end = new Date().getTime();  // benchmarking
   console.log('done in ' + (end - start) + 'ms.');
 
   var dbscan = DBScan({data: vectors});
 
   dbscan.run(function (err, result) {
-    for (var cluster in result) {
-      console.log('');
+    console.log('result');
+    for (cluster in result) {
       console.log('cluster', cluster);
-      result[cluster].forEach(function (document) {
-        console.log(vectors[document].url);
+      result[cluster].forEach(function (doc) {
+        console.log('>>>>', vectors[doc].url);
       });
-      console.log('=========');
-      console.log('');
+      console.log('<<<<<<<<<<<<<<<<<');
     }
   });
 };

@@ -35,6 +35,8 @@ var DBScan = function (args) {
   if (typeof args.minPoints === 'undefined') args.minPoints = 1;
 
   obj = Object.create(DBScan.prototype);
+
+  // inputs
   obj.data = args.data;
   obj.eps = args.eps;
   obj.minPoints = args.minPoints;
@@ -49,7 +51,6 @@ DBScan.prototype.run = function (callback) {
   console.log('Running DBScan...');
   var start = new Date().getTime();
 
-  // local variables
   var self = this;
 
   // for each document in the data set
@@ -95,9 +96,11 @@ DBScan.prototype.getNeighbours = function (a) {
   var self = this;
   var neighbours = [];
   
-  for (var b in this.data)
-    if (a !== b && Math.cosineSimilarity(this.data[a].vector, this.data[b].vector) > (1 - self.eps))
+  for (var b in this.data) {
+    if (a === b) continue;
+    if (Math.cosineSimilarity(this.data[a].vector, this.data[b].vector) > (1 - self.eps))
       neighbours.push(b);
+  }
 
   return neighbours;
 };
