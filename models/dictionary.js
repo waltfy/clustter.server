@@ -11,18 +11,11 @@ function DictionarySchema () {
   }, { collection: 'dictionary'});
 
   // Maintains the document frequency of a term given an article.
-  DictionarySchema.statics.documentFrequency = function (article) {
-    console.log('');
-    console.log('started updating dictionary', article._id);
-    
-    var update = { $inc: { documentFrequency: 1 }};
+  DictionarySchema.statics.documentFrequency = function (doc) {
+    for (var word in doc.wordFrequency)
+      this.update({word: word}, { $inc: { documentFrequency: 1 }}, {upsert: true}).exec();
 
-    for (var word in article.wordFrequency) {
-      this.update({word: word}, update, {upsert: true}).exec();
-    }
-
-    console.log('>> finished updating dictionary', article._id);
-
+    return;
   };
 
   return DictionarySchema;

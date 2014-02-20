@@ -2,7 +2,7 @@ module.exports = function (db) {
   return db.model('Article', ArticleSchema());
 }
 
-// article schema
+// Article schema
 function ArticleSchema () {
 
   var Schema = require('mongoose').Schema,
@@ -20,7 +20,7 @@ function ArticleSchema () {
     updated: { type: Date, default: Date.now }
   });
 
-  // Tokenises and stems the article
+  // Tokenises and stems the Article
   ArticleSchema.statics.tokenise = function (story) {
 
     return story.tokenizeAndStem();

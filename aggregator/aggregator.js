@@ -1,76 +1,71 @@
-// dbscan
-var Mongoose = require('mongoose'),
-    DB = Mongoose.createConnection('mongodb://localhost/clustter'),
-    async = require('async'),
-    Article = require('../models/article.js')(DB);
-    Dictionary = require('../models/dictionary.js')(DB),
-    DBScan = require('./dbscan');
+// aggregator class dependencies
+var util = require('util');
+var EventEmitter = require('events').EventEmitter;
 
-console.log('Clustter Aggregator\n================');
+// aggregator dependencies
+var DBScan = require('./dbscan');
 
-async.parallel([
-    function (callback) {
-      // Get list of articles.
-      console.log('loading articles...');
-      Article.find({}, function (err, articles) {
-        callback(err, articles);
-      });
-    },
-    function (callback) {
-      // Get list of words and convert to a hashmap.
-      console.log('loading dictionary...');
-      Dictionary.find({}, function (err, dictionary) {
-        var result = {};
-        dictionary.forEach(function (item) {
-          result[item.word] = item.documentFrequency;
-        });
-        callback(err, result);
-      });
-    }
-    ],
-    function (err, results) {
-      console.log('done.');
-      computeVectors({articles: results[0], dictionary: results[1]});
-    }
-);
+// aggregator constructor
+var Aggregator = function () {
+  if (!(this instanceof Aggregator)) return new Aggregator(); // unsure about this?
+  EventEmitter.call(this); // Calling EventEmitter constructor.
 
-var computeVectors = function (args) {
-  console.log('computing vectors...');
-  var vectors = {};
-
-  var start = new Date().getTime(); // benchmarking
-
-  // representing each document as a vector
-  args.articles.forEach(function (article, index) {
-    var vector = {};
-
-    for (word in article.wordFrequency) {
-      
-      if (args.dictionary[word] === undefined) {
-        console.log('[WARN]:', word, '-', 'not in dictionary'); // need to handle it better
-      }
-        
-      vector[word] = (article.wordFrequency[word] / article.wordCount) * Math.log(args.articles.length / args.dictionary[word]);
-    }
-
-    vectors[article._id] = {vector: vector, url: article.url };
-
-  });
-
-  var end = new Date().getTime();  // benchmarking
-  console.log('done in ' + (end - start) + 'ms.');
-
-  var dbscan = DBScan({data: vectors});
-
-  dbscan.run(function (err, result) {
-    console.log('result');
-    console.log(Object.keys(result).length);
-    for (cluster in result) {
-      console.log('cluster', cluster);
-      result[cluster].forEach(function (doc) {
-        console.log('>>>>', vectors[doc].url);
-      });
-      console.log('<<<<<<<<<<<<<<<<<');
-    }
-  });
+  this.clusters = new Array();
+  // this.dictionary = {};
 };
+
+// enabling events
+util.inherits(Aggregator, EventEmitter);
+
+// init required params
+Aggregator.prototype.init = function (args) {
+  this.clusters = args.clusters;
+  this.Dictionary = args.Dictionary;
+  this.Cluster = args.Cluster;
+}
+
+// computes a vector based on the current article, number of articles in db and a dictionary returns a vector object.
+Aggregator.prototype.computeVector = function (article, corpusSize, dictionary) {
+  this.emit('status', 'computing vector');
+  var vector = {}; // representing document as a vector
+
+  for (word in article.wordFrequency) {
+    if (typeof dictionary[word] === 'undefined')
+      console.log('[WARN]:', word, '-', 'not in dictionary'); // need to handle it better
+
+    vector[word] = (article.wordFrequency[word] / article.wordCount) * Math.log(corpusSize / dictionary[word]); // tf-idf score    
+  }
+  // return vector; // should return the vector
+  // self.vectors[article._id] = {vector: vector, url: article.url };
+};
+
+// adds a new document to the cluster body
+Aggregator.prototype.add = function (args) {
+  var article = args.article;
+  var corpusSize = args.corpusSize;
+
+  var self = this;
+  console.log('\ncalled', arguments.callee);
+
+  this.Dictionary.find({}).lean().exec(function (err, docs) {
+    console.log(docs);
+  });
+
+  // this.Dictionary.find({}, function (err, words) {
+  //   var dictionary = {};
+    
+  //   words.forEach(function (item) {
+  //     dictionary[item.word] = item.documentFrequency;
+  //   });
+
+  //   self.computeVector(article, corpusSize, dictionary);
+  // });
+
+  // var newVector = this.computeVector(article, corpusSize);
+  // this.recomputeClusters();
+};
+
+// var dbscan = DBScan({data: this.vectors});
+// dbscan.run(function (err, result) {});
+
+module.exports = Aggregator;
