@@ -1,5 +1,3 @@
-/* Clustter */
-
 // dependencies
 var async = require('async'),
     Mongoose = require('mongoose'),
@@ -11,8 +9,8 @@ var async = require('async'),
 
 // imports
 var logging = true;
-var scraper = require('./scraper/scraper')(); // scraper
-    var aggregator = require('./aggregator/aggregator')(); // aggregator
+var scraper = require('./scraper/scraper'); // scraper
+var aggregator = require('./aggregator/aggregator'); // aggregator
     // var summarizer = require('summarizer'); // summarizer
 
 // logging function
@@ -53,26 +51,21 @@ async.parallel([
         robots = results[1],
         clusters = results[2];
         // dictionary = results[3];
-
     scraper.init({ articles: articles, robots: robots, Article: Article, Dictionary: Dictionary }); // init scraper
     aggregator.init({ clusters: clusters,  Dictionary: Dictionary, Cluster: Cluster }); // init aggregator
   }
 );
 
-// events
+// attaching listeners
+
+// common listeners
 [scraper, aggregator].map(function (module) {
-  module.on('status', log);
+  module.emitter.on('status', log);
+  module.emitter.on('running', function () {
+    console.log('running', module);
+  });
 });
 
-scraper.on('article:new', function (article) {
-  console.log('new article', article._id);
-  aggregator.add(article);
+scraper.emitter.on('article:new', function (article) {
+  console.log('new article created:\n', article);
 });
-
-// aggregator.on('done', function () {
-//   // initialise summarizer
-// });
-
-// summarizer.on('done', functon () {
-//   // initialise scraper 
-// });
