@@ -1,69 +1,124 @@
-// events
-var events = require('events');
-var emitter = new events.EventEmitter;
+module.exports = Aggregator();
 
-// aggregator dependencies
-var DBScan = require('./dbscan');
-
-// aggregator constructor
-var Aggregator = function () {
-  if (!(this instanceof Aggregator)) return new Aggregator(); // unsure about this?
-
-  this.clusters = new Array();
-  // this.dictionary = {};
-};
-
-// init required params
-Aggregator.prototype.init = function (args) {
-  this.clusters = args.clusters;
-  this.Dictionary = args.Dictionary;
-  this.Cluster = args.Cluster;
-  emitter.emit('running');
-}
-
-// computes a vector based on the current article, number of articles in db and a dictionary returns a vector object.
-Aggregator.prototype.computeVector = function (article, corpusSize, dictionary) {
-  sharedEvents.emit('status', 'computing vector');
-  var vector = {}; // representing document as a vector
-
-  for (word in article.wordFrequency) {
-    if (typeof dictionary[word] === 'undefined')
-      console.log('[WARN]:', word, '-', 'not in dictionary'); // need to handle it better
-
-    vector[word] = (article.wordFrequency[word] / article.wordCount) * Math.log(corpusSize / dictionary[word]); // tf-idf score    
-  }
-  console.log(vector);
-  // return vector; // should return the vector
-  // self.vectors[article._id] = {vector: vector, url: article.url };
-};
-
-// adds a new document to the cluster body
-Aggregator.prototype.add = function (article) {
-  // var article = args.article;
-  // var corpusSize = args.corpusSize;
-
-  var self = this;
+function Aggregator () {
+  if (!(this instanceof Aggregator)) return new Aggregator();
   
-  this.Dictionary.find({}, function (err, words) {
-    var dictionary = {};
-    console.log('managed to get dictionary');
-    // words.forEach(function (item) {
-    //   dictionary[item.word] = item.documentFrequency;
-    // });
-  });
+  // dependencies
+  var dbscan = require('./dbscan'),
+      events = require('events'),
+      async = require('async');
 
-  // self.computeVector(article, corpusSize, dictionary);
-  // var newVector = this.computeVector(article, corpusSize);
-  // this.recomputeClusters();
-};
+  /* private vars */
+  var self = this,
+      clustered = [],
+      corpusSize = null,
+      dictionary = {};
 
-// var dbscan = DBScan({data: this.vectors});
-// dbscan.run(function (err, result) {});
+  /* public vars */
+  this.emitter = new events.EventEmitter;
+  this.models = null;
+  this.clusters = {};
 
-module.exports = {
-  init: function (args) {
-    var a = new Aggregator();
-    a.init(args);
-  },
-  emitter: emitter
-};
+  /* private methods */
+  // queries database for dictionary
+  var getDictionary = function (cb) {
+    self.models.dictionary.find({}).exec(function (err, words) {
+      words.forEach(function (item) {
+        dictionary[item.word] = item.documentFrequency;
+      });
+      cb(err, dictionary);
+    });
+  };
+
+  // queries database for clusters
+  var getClusters = function (cb) {
+    self.models.cluster.find({}).populate({path: 'articles'}).exec(function (err, clusters) {
+      clusters.forEach(function (cluster) {
+        clustered = clustered.concat(cluster.articles.map(function (article) { return article._id }));
+        self.clusters[cluster._id] = { articles: cluster.articles, vector: {} };
+      });
+      cb(err, self.clusters);
+    });
+  };
+
+  var getCorpusSize = function (cb) {
+    self.models.article.count(function (err, count) {
+      corpusSize = count;
+      cb(err, count);
+    });
+  };
+
+  var getAverageVector = function (cb) {
+    async.each(Object.keys(self.clusters), function (k, done) {
+      var vectors = self.clusters[k].articles.map(function (article) {
+        return computeVector(article);
+      });
+
+      self.clusters[k].vector = Math.averageVector(vectors);
+      done();
+    }, function (err) {
+      cb(err);
+    });
+  };
+
+  var computeVector = function (article) {
+    var vector = {}; // representing document as a vector
+
+    for (word in article.wordFrequency) {
+      if (typeof dictionary[word] === 'undefined')
+        console.log('[WARN]:', word, '-', 'not in dictionary'); // need to handle it better
+      vector[word] = (article.wordFrequency[word] / article.wordCount) * Math.log(corpusSize / dictionary[word]); // tf-idf score    
+    }
+    return vector;
+  };
+
+  // creates cluster for unclustered articles
+  var createCluster = function (article, cb) {
+    var cluster = new self.models.cluster;
+    cluster.articles.push(article);
+    cluster.vector = {};
+
+    cluster.save(function (err, cluster) {
+      console.log('saved cluster:', cluster._id);
+      self.clusters[cluster._id] = { articles: cluster.articles, vector: {} };
+      cb(err);
+    });
+  };
+
+  // returns all unclustered articles
+  var getUnclustered = function (cb) {
+    self.models.article.find({}).where('_id').nin(clustered).exec(function (err, articles) {
+      async.each(articles, function (article, done) {
+        createCluster(article, done);
+      }, function (err) {
+        cb(err);
+      });
+    });
+  }
+
+  /* public methods */
+  this.init = function (models) {
+    console.log('initialising aggregator');
+    this.models = models;
+  };
+
+  // runs the aggregator
+  this.run = function () {
+    async.series([
+      getCorpusSize,
+      getDictionary,
+      getClusters,
+      getUnclustered,
+      getAverageVector
+    ], function (err, result) {
+      console.log('dictionary size:', Object.keys(dictionary).length);
+      console.log('corpus size:', corpusSize);
+      console.log('clusters:', Object.keys(self.clusters).length);
+      console.log('clustered docs:', clustered.length);
+      // dbscan({data: self.clusters}).run(function (err, result) {
+      //   console.log(result);
+      //   self.emitter.emit('done');
+      // });
+    });
+  };
+}

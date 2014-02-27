@@ -8,6 +8,7 @@ function ClusterSchema () {
 
   var ClusterSchema = new Schema({
     articles: [{ type: Schema.Types.ObjectId, ref: 'Article' }],
+    vector: {},
     updated: { type: Date, default: Date.now }
   });
 

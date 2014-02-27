@@ -1,7 +1,7 @@
 var get = require('mongoose').Types; // get.ObjectId(); Used to retrieve a new cluster id.
 
 Math.dotProduct = function (v1, v2) {
-  var dot = 0, min = Math.min(Object.keys(v1).length, Object.keys(v2).length);
+  var dot = 0;
 
   for (word in v1) {
     var value = v2[word] || 0;
@@ -9,6 +9,31 @@ Math.dotProduct = function (v1, v2) {
   }
 
   return dot;
+};
+
+Math.averageVector = function (vectors) {
+  var min = Number.POSITIVE_INFINITY;
+  var mainVector = null;
+  var newVector = {};
+  var start = new Date().getTime();
+  vectors.forEach(function (vector) {
+    if (Object.keys(vector).length < min) {
+      mainVector = vector;
+      min = Object.keys(mainVector).length;
+    }
+  });
+
+  for (word in mainVector) {
+    var number = vectors.reduce(function (initial, current) {
+      var obj = {};
+      obj[word] = initial[word] + current[word];
+      return obj;
+    });
+    newVector[word] = (number[word] / vectors.length);
+  }
+  var end = new Date().getTime();
+  // console.log('time taken:', (end - start) + 'ms');
+  return newVector;
 };
 
 Math.magnitude = function (v) {
@@ -55,19 +80,19 @@ DBScan.prototype.run = function (callback) {
 
   var c = 0;
 
-  // for each document in the data set
-  for (var doc in this.data) {
-    if (!this.isVisited(doc)) {
-      this.visited.push(doc); // visiting
+  // for each cluster in the data set
+  for (var cluster in this.data) {
+    if (!this.isVisited(cluster)) {
+      this.visited.push(cluster); // visiting
 
-      var neighbours = this.getNeighbours(doc); // get its neighbours
+      var neighbours = this.getNeighbours(cluster); // get its neighbours
 
       if (neighbours.length === 0) { // has no neighbours
         c++;
-        this.clusters[c] = [doc]; // initialise cluster on its own
+        this.clusters[c] = [cluster]; // initialise cluster on its own
       } else {
         c++;
-        this.expandCluster(doc, neighbours, c);
+        this.expandCluster(cluster, neighbours, c);
       }
     }
   }
@@ -78,6 +103,7 @@ DBScan.prototype.run = function (callback) {
 };
 
 DBScan.prototype.isVisited = function (doc) {
+  
   return (this.visited.indexOf(doc) === -1) ? false : true;
 };
 

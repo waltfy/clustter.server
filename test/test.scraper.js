@@ -9,11 +9,10 @@ suite('scraper', function () {
   });
 
   test('checks for internet connection', function (done) {
-    var connected = scraper.checkConnection(function (result) {
-      assert.equal(result, true);
+    scraper.checkConnection(function (err, connected) {
+      assert.equal(connected, true);
       done();
     });
-      
   });
 
 });

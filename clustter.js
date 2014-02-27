@@ -7,65 +7,36 @@ var async = require('async'),
     Cluster = require('./models/cluster.js')(DB),
     Dictionary = require('./models/dictionary.js')(DB);
 
-// imports
-var logging = true;
-var scraper = require('./scraper/scraper'); // scraper
-var aggregator = require('./aggregator/aggregator'); // aggregator
-    // var summarizer = require('summarizer'); // summarizer
+// opening database connection
+DB.on('error', console.error.bind(console, 'database error.'));
+DB.on('open', init);
 
-// logging function
-function log (message) {
-  // if (logging) {
-  //   process.stdout.clearLine();
-  //   process.stdout.cursorTo(0);
-  //   process.stdout.write(message);
-  // }
-  console.log(message);
-}
+// local variables
+var modules = [
+  scraper = require('./scraper/scraper'),
+  aggregator = require('./aggregator/aggregator')
+  // summarizer = require('summarizer') // summarizer
+];
 
-// initialising
-console.log('Clustter\n========');
-DB.on('error', console.error.bind(console, 'database connection error '));
-DB.on('open', console.log.bind(console, 'database connection established'));
+var models = {article: Article, dictionary: Dictionary, cluster: Cluster, robot: Robot };
 
-// loading necessary items from db
-async.parallel([
-  function (callback) { // loading articles
-    Article.find({}, function (err, articles) {
-      callback(err, articles);
-    });
-  },
-  function (callback) { // loading robots
-    Robot.find({}, function (err, robots) {
-      callback(err, robots);
-    });
-  },
-  function (callback) { // loading clusters
-    Cluster.find({}, function (err, clusters) {
-      callback(err, clusters);
-    });
-  }],
-  function (err, results) {
-    log('loaded robots & documents & dictionary');
-    var articles = results[0],
-        robots = results[1],
-        clusters = results[2];
-        // dictionary = results[3];
-    scraper.init({ articles: articles, robots: robots, Article: Article, Dictionary: Dictionary }); // init scraper
-    aggregator.init({ clusters: clusters,  Dictionary: Dictionary, Cluster: Cluster }); // init aggregator
-  }
-);
+// initialises clustter
+function init () {
+  console.log('Clustter\n========');
+  aggregator.init(models);
+  aggregator.run();
+  // modules.forEach(function (module) {
+  //   module.init(models);
+  // });
+};
 
-// attaching listeners
-
-// common listeners
-[scraper, aggregator].map(function (module) {
-  module.emitter.on('status', log);
-  module.emitter.on('running', function () {
-    console.log('running', module);
-  });
+/* event listeners */
+scraper.emitter.on('done', function () {
+  console.log('scraper has finished');
+  aggregator.run();
 });
 
-scraper.emitter.on('article:new', function (article) {
-  console.log('new article created:\n', article);
+aggregator.emitter.on('done', function () {
+  console.log('aggregator has finished');
+  // summarizer.run();
 });
