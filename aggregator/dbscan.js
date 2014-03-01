@@ -15,7 +15,7 @@ Math.averageVector = function (vectors) {
   var min = Number.POSITIVE_INFINITY;
   var mainVector = null;
   var newVector = {};
-  var start = new Date().getTime();
+
   vectors.forEach(function (vector) {
     if (Object.keys(vector).length < min) {
       mainVector = vector;
@@ -31,8 +31,7 @@ Math.averageVector = function (vectors) {
     });
     newVector[word] = (number[word] / vectors.length);
   }
-  var end = new Date().getTime();
-  // console.log('time taken:', (end - start) + 'ms');
+  
   return newVector;
 };
 
@@ -125,7 +124,7 @@ DBScan.prototype.expandCluster = function (doc, neighbours, cluster) {
 DBScan.prototype.getNeighbours = function (a) {
   var self = this;
   var neighbours = [];
-  
+
   for (var b in this.data) {
     if (a === b) continue;
     if (Math.cosineSimilarity(this.data[a].vector, this.data[b].vector) > (1 - self.eps))

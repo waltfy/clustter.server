@@ -14,8 +14,8 @@ DB.on('open', init);
 // local variables
 var modules = [
   scraper = require('./scraper/scraper'),
-  aggregator = require('./aggregator/aggregator')
-  // summarizer = require('summarizer') // summarizer
+  aggregator = require('./aggregator/aggregator'),
+  summarizer = require('./summarizer/summarizer') // summarizer
 ];
 
 var models = {article: Article, dictionary: Dictionary, cluster: Cluster, robot: Robot };
@@ -23,11 +23,9 @@ var models = {article: Article, dictionary: Dictionary, cluster: Cluster, robot:
 // initialises clustter
 function init () {
   console.log('Clustter\n========');
-  aggregator.init(models);
-  aggregator.run();
-  // modules.forEach(function (module) {
-  //   module.init(models);
-  // });
+  modules.forEach(function (module) {
+    module.init(models);
+  });
 };
 
 /* event listeners */
@@ -38,5 +36,12 @@ scraper.emitter.on('done', function () {
 
 aggregator.emitter.on('done', function () {
   console.log('aggregator has finished');
-  // summarizer.run();
+  summarizer.run();
+});
+
+summarizer.emitter.on('done', function () {
+  console.log('summarizer has finished');
+  setTimeout(function () {
+    scraper.run();
+  }, 5000);
 });

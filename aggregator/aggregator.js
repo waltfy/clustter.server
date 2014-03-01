@@ -18,8 +18,10 @@ function Aggregator () {
   this.emitter = new events.EventEmitter;
   this.models = null;
   this.clusters = {};
+  this.articles = {};
 
   /* private methods */
+
   // queries database for dictionary
   var getDictionary = function (cb) {
     self.models.dictionary.find({}).exec(function (err, words) {
@@ -30,37 +32,53 @@ function Aggregator () {
     });
   };
 
+  // queries database and sets the corpusSize and local copy of articles
+  var getArticles = function (cb) {
+    self.models.article.find({}).exec(function (err, articles) {
+      corpusSize = articles.length;
+      articles.forEach(function (article) {
+        self.articles[article._id] = {vector: computeVector(article), url: article.url}
+      });
+      cb(err, self.articles);
+    });
+  };
+
   // queries database for clusters
   var getClusters = function (cb) {
-    self.models.cluster.find({}).populate({path: 'articles'}).exec(function (err, clusters) {
+    self.models.cluster.find({}).exec(function (err, clusters) {
       clusters.forEach(function (cluster) {
-        clustered = clustered.concat(cluster.articles.map(function (article) { return article._id }));
+        clustered = clustered.concat(cluster.articles);
         self.clusters[cluster._id] = { articles: cluster.articles, vector: {} };
       });
       cb(err, self.clusters);
     });
   };
 
-  var getCorpusSize = function (cb) {
-    self.models.article.count(function (err, count) {
-      corpusSize = count;
-      cb(err, count);
-    });
-  };
-
-  var getAverageVector = function (cb) {
-    async.each(Object.keys(self.clusters), function (k, done) {
-      var vectors = self.clusters[k].articles.map(function (article) {
-        return computeVector(article);
+  var processUnclustered = function (cb) {
+    self.models.article.find({}).lean().where('_id').nin(clustered).select('_id').exec(function (err, articles) {
+      async.each(articles, function (article, done) {
+        var cluster = new self.models.cluster;
+        cluster.articles.push(article);
+        cluster.save(function (err, cluster) { 
+          self.clusters[cluster._id] = {articles: cluster.articles, vector: self.articles[article._id].vector};
+          done();
+        });
+      }, function (err) {
+        cb(err);
       });
-
-      self.clusters[k].vector = Math.averageVector(vectors);
-      done();
-    }, function (err) {
-      cb(err);
     });
   };
 
+  var processClustersVectors = function (cb) {
+    for (cluster in self.clusters) {
+      self.clusters[cluster].vector = Math.averageVector(self.clusters[cluster].articles.map(function (id) {
+        return self.articles[id].vector;
+      }));
+    }
+    cb();
+  };
+
+  // calculate vector representation of an article
   var computeVector = function (article) {
     var vector = {}; // representing document as a vector
 
@@ -72,29 +90,20 @@ function Aggregator () {
     return vector;
   };
 
-  // creates cluster for unclustered articles
-  var createCluster = function (article, cb) {
-    var cluster = new self.models.cluster;
-    cluster.articles.push(article);
-    cluster.vector = {};
+  var mergeClusters = function (clusters, cb) {
+    var newCluster = new self.models.cluster;
 
-    cluster.save(function (err, cluster) {
-      console.log('saved cluster:', cluster._id);
-      self.clusters[cluster._id] = { articles: cluster.articles, vector: {} };
+    clusters.forEach(function (cluster_id) {
+      self.clusters[cluster_id].articles.forEach(function (article_id) {
+        newCluster.articles.push(article_id);
+      });
+      self.models.cluster.findOne({_id: cluster_id}).remove().exec();
+    });
+
+    newCluster.save(function (err, cluster) {
       cb(err);
     });
   };
-
-  // returns all unclustered articles
-  var getUnclustered = function (cb) {
-    self.models.article.find({}).where('_id').nin(clustered).exec(function (err, articles) {
-      async.each(articles, function (article, done) {
-        createCluster(article, done);
-      }, function (err) {
-        cb(err);
-      });
-    });
-  }
 
   /* public methods */
   this.init = function (models) {
@@ -105,20 +114,22 @@ function Aggregator () {
   // runs the aggregator
   this.run = function () {
     async.series([
-      getCorpusSize,
       getDictionary,
+      getArticles,
       getClusters,
-      getUnclustered,
-      getAverageVector
+      processUnclustered,
+      processClustersVectors
     ], function (err, result) {
-      console.log('dictionary size:', Object.keys(dictionary).length);
-      console.log('corpus size:', corpusSize);
-      console.log('clusters:', Object.keys(self.clusters).length);
-      console.log('clustered docs:', clustered.length);
-      // dbscan({data: self.clusters}).run(function (err, result) {
-      //   console.log(result);
-      //   self.emitter.emit('done');
-      // });
+      console.log('done');
+      dbscan({data: self.clusters}).run(function (err, result) {
+        async.each(Object.keys(result), function (key, done) {
+          mergeClusters(result[key], done);
+        },
+          function (err) {
+            self.emitter.emit('done');
+          }
+        );       
+      });
     });
   };
 }
