@@ -17,11 +17,9 @@ function Aggregator () {
   /* public vars */
   this.emitter = new events.EventEmitter;
   this.models = null;
-  this.clusters = {};
   this.articles = {};
 
   /* private methods */
-
   // queries database for dictionary
   var getDictionary = function (cb) {
     self.models.dictionary.find({}).exec(function (err, words) {
@@ -43,71 +41,32 @@ function Aggregator () {
     });
   };
 
-  // queries database for clusters
-  var getClusters = function (cb) {
-    self.models.cluster.find({}).exec(function (err, clusters) {
-      clusters.forEach(function (cluster) {
-        clustered = clustered.concat(cluster.articles);
-        self.clusters[cluster._id] = { articles: cluster.articles, vector: {} };
-      });
-      cb(err, self.clusters);
-    });
-  };
-
-  var processUnclustered = function (cb) {
-    self.models.article.find({}).lean().where('_id').nin(clustered).select('_id').exec(function (err, articles) {
-      async.each(articles, function (article, done) {
-        var cluster = new self.models.cluster;
-        cluster.articles.push(article);
-        cluster.save(function (err, cluster) { 
-          self.clusters[cluster._id] = {articles: cluster.articles, vector: self.articles[article._id].vector};
-          done();
-        });
-      }, function (err) {
-        cb(err);
-      });
-    });
-  };
-
-  var processClustersVectors = function (cb) {
-    for (cluster in self.clusters) {
-      self.clusters[cluster].vector = Math.averageVector(self.clusters[cluster].articles.map(function (id) {
-        return self.articles[id].vector;
-      }));
-    }
-    cb();
-  };
-
   // calculate vector representation of an article
   var computeVector = function (article) {
     var vector = {}; // representing document as a vector
-
-    for (word in article.wordFrequency) {
+    for (var word in article.wordFrequency) {
+      vector[word] = (article.wordFrequency[word] / article.wordCount) * Math.log(corpusSize / dictionary[word]); // tf-idf score
       if (typeof dictionary[word] === 'undefined')
         console.log('[WARN]:', word, '-', 'not in dictionary'); // need to handle it better
-      vector[word] = (article.wordFrequency[word] / article.wordCount) * Math.log(corpusSize / dictionary[word]); // tf-idf score    
     }
     return vector;
   };
 
-  var mergeClusters = function (clusters, cb) {
-    var newCluster = new self.models.cluster;
-
-    clusters.forEach(function (cluster_id) {
-      self.clusters[cluster_id].articles.forEach(function (article_id) {
-        newCluster.articles.push(article_id);
-      });
-      self.models.cluster.findOne({_id: cluster_id}).remove().exec();
-    });
-
-    newCluster.save(function (err, cluster) {
-      cb(err);
+  var clusterVectors = function () {
+    dbscan({data: self.articles}).run(function (err, result) {
+      for (key in result) {
+        console.log(key);
+        result[key].forEach(function (article) {
+          console.log('>>>>', self.articles[article].url);
+        });
+      }
     });
   };
 
   /* public methods */
+  // initialises the aggregator
   this.init = function (models) {
-    console.log('initialising aggregator');
+    console.log('aggregator... initialised');
     this.models = models;
   };
 
@@ -115,21 +74,9 @@ function Aggregator () {
   this.run = function () {
     async.series([
       getDictionary,
-      getArticles,
-      getClusters,
-      processUnclustered,
-      processClustersVectors
+      getArticles
     ], function (err, result) {
-      console.log('done');
-      dbscan({data: self.clusters}).run(function (err, result) {
-        async.each(Object.keys(result), function (key, done) {
-          mergeClusters(result[key], done);
-        },
-          function (err) {
-            self.emitter.emit('done');
-          }
-        );       
-      });
+      clusterVectors();
     });
   };
 }

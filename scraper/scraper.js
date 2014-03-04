@@ -101,9 +101,8 @@ function Scraper () {
   /* public methods */
   // initialises scraper
   this.init = function (models) {
-    console.log('initialising scraper');
+    console.log('scraper... initialised');
     this.models = models;
-    this.run();
   };
 
   // runs scraper

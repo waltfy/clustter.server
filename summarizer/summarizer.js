@@ -1,5 +1,6 @@
 var async = require('async'),
-    events = require('events');
+    events = require('events')
+    summarizer = require('node-summary');
 
 module.exports = Summarizer();
 
@@ -12,7 +13,7 @@ function Summarizer () {
 
   this.init = function (models) {
     this.models = models;
-    console.log('initialising summarizer');
+    console.log('summarizer... initialised');
   };
 
   this.run = function () {

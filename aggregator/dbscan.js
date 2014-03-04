@@ -1,38 +1,13 @@
 var get = require('mongoose').Types; // get.ObjectId(); Used to retrieve a new cluster id.
 
 Math.dotProduct = function (v1, v2) {
-  var dot = 0;
+  var dot = 0,
+      min = (Object.keys(v1).length <= Object.keys(v2).length) ? v1 : v2;
 
-  for (word in v1) {
-    var value = v2[word] || 0;
-    dot += v1[word] * value;
-  }
+  for (word in min)
+    dot += (v1[word] || 0) * (v2[word] || 0);
 
   return dot;
-};
-
-Math.averageVector = function (vectors) {
-  var min = Number.POSITIVE_INFINITY;
-  var mainVector = null;
-  var newVector = {};
-
-  vectors.forEach(function (vector) {
-    if (Object.keys(vector).length < min) {
-      mainVector = vector;
-      min = Object.keys(mainVector).length;
-    }
-  });
-
-  for (word in mainVector) {
-    var number = vectors.reduce(function (initial, current) {
-      var obj = {};
-      obj[word] = initial[word] + current[word];
-      return obj;
-    });
-    newVector[word] = (number[word] / vectors.length);
-  }
-  
-  return newVector;
 };
 
 Math.magnitude = function (v) {
@@ -80,18 +55,24 @@ DBScan.prototype.run = function (callback) {
   var c = 0;
 
   // for each cluster in the data set
-  for (var cluster in this.data) {
-    if (!this.isVisited(cluster)) {
-      this.visited.push(cluster); // visiting
+  for (var article in this.data) {
+    if (!this.isVisited(article)) {
+      this.visited.push(article); // visiting
 
-      var neighbours = this.getNeighbours(cluster); // get its neighbours
+      var neighbours = this.getNeighbours(article); // get its neighbours
+      if (neighbours.length > 0)
+        console.log('neighbours of', article);
+      
+      neighbours.forEach(function (neighbour) {
+        console.log('>>>>', neighbour);  
+      });
 
       if (neighbours.length === 0) { // has no neighbours
         c++;
-        this.clusters[c] = [cluster]; // initialise cluster on its own
+        this.clusters[c] = [article]; // initialise cluster on its own
       } else {
         c++;
-        this.expandCluster(cluster, neighbours, c);
+        this.expandCluster(article, neighbours, c);
       }
     }
   }
@@ -102,12 +83,11 @@ DBScan.prototype.run = function (callback) {
 };
 
 DBScan.prototype.isVisited = function (doc) {
-  
   return (this.visited.indexOf(doc) === -1) ? false : true;
 };
 
-DBScan.prototype.expandCluster = function (doc, neighbours, cluster) {
-  this.clusters[cluster] = [doc]; // adding doc to cluster
+DBScan.prototype.expandCluster = function (doc, neighbours, vector) {
+  this.clusters[vector] = [doc]; // adding doc to cluster
   
   for (n in neighbours) {
     if (!this.isVisited(neighbours[n])) {
@@ -118,7 +98,7 @@ DBScan.prototype.expandCluster = function (doc, neighbours, cluster) {
     }
   }
 
-  this.clusters[cluster] = neighbours;
+  this.clusters[vector] = neighbours;
 };
 
 DBScan.prototype.getNeighbours = function (a) {
