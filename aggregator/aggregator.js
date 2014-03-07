@@ -52,14 +52,25 @@ function Aggregator () {
     return vector;
   };
 
+  var createCluster = function (cluster, cb) {
+    var c = new self.models.cluster;
+    cluster.forEach(function (article) {
+      c.articles.push(article);
+    });
+    c.save(cb);
+  };
+
+  // creates clusters
   var clusterVectors = function () {
-    dbscan({data: self.articles}).run(function (err, result) {
-      for (key in result) {
-        console.log(key);
-        result[key].forEach(function (article) {
-          console.log('>>>>', self.articles[article].url);
-        });
-      }
+    dbscan({data: self.articles}).run(function (err, clusters) {
+      
+      async.each(Object.keys(clusters), function (key, done) {
+        createCluster(clusters[key], done);
+      }, function (err) {
+        console.log('created clusters');
+        self.emitter.emit('done');
+      });
+      
     });
   };
 
