@@ -1,8 +1,8 @@
 {
-  "name": "ClustterAPI",
+  "name": "Clustter",
   "version": "0.0.0",
   "description": "A customised, aggregated and summarised news feed for you.",
-  "main": "api.js",
+  "main": "clustter.js",
   "private": true,
   "scripts": {
     "test": "make"
@@ -19,19 +19,17 @@
   "author": "Walter Carvalho",
   "license": "BSD",
   "bugs": {
-    "url": "https://github.com/waltervascarvalho/clustter/issues"
+    "url": "https://github.com/waltervascarvalho/clustter.server/issues"
   },
   "dependencies": {
     "request": "~2.33.0",
     "keyword-extractor": "0.0.7",
-    "express": "3.x",
     "natural": "~0.1.24",
     "crawler": "~0.2.5",
     "html-to-text": "0.0.6",
     "mongoose": "~3.8.1",
     "async": "~0.2.9",
     "article": "~1.1.0",
-    "node-summary": "~1.0.0",
     "sum": "~0.1.1",
     "titlegen": "0.0.2"
   },
