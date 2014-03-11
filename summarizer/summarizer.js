@@ -1,13 +1,15 @@
 var async = require('async'),
     events = require('events'),
     summaryTool = require('sum'), // require('node-summary');
-    titleGen = require('titlegen');
+    titleGen = require('titlegen'),
+    request = require('request');
 
 module.exports = Summarizer();
 
 function Summarizer () {
   if (!(this instanceof Summarizer)) return new Summarizer();
   var self = this;
+  var classifierApi = { read: 'ofGRa4pRnCvAXv2pnMirYMuaDLc' };
 
   this.models = null;
   this.clusters = null;
@@ -37,7 +39,26 @@ function Summarizer () {
       story.title = 'bad story';
 
     story.content = summaryTool({ corpus: content, nSentences: (cluster.articles.length * 2) }).sentences;
-    story.save(cb);
+
+    request('http://uclassify.com/browse/mvazquez/News Classifier/ClassifyText?readkey=' + classifierApi.read + '&text=' + encodeURI(story.content.join('  ')) + '&output=json&version=1.01', function (err, res, body) {
+      var response, category;
+      try {
+        response = JSON.parse(body);
+        var categories = [];
+      
+        for (var c in response.cls1)
+          categories.push([c, response.cls1[c]]);
+        categories.sort(function(a, b) {return b[1] - a[1]});
+
+        story.category = ((categories[0][0] === 'US') ? 'UK & Others' : categories[0][0]);
+
+      } catch (e) {
+        console.log(new Error('Could not set category.'));
+        story.category = 'Miscellaneous';
+      } finally {
+        story.save(cb);
+      }
+    });
   };
 
   var summarizeClusters = function (cb) {

@@ -2,3 +2,4 @@ node_modules/
 dist/
 libs/
 .DS_Store
+clustter_options
