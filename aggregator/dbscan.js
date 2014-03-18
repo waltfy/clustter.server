@@ -1,7 +1,7 @@
 var DBScan = function (args) {
   if (typeof args.data === 'undefined') console.error(Error('No data provided.'));
   if (typeof args.eps === 'undefined') args.eps = 0.5;
-  if (typeof args.minPoints === 'undefined') args.minPoints = 1;
+  if (typeof args.minPoints === 'undefined') args.minPoints = 2;
   if (Object.keys(args.data).length === 0) console.error(Error('No articles found'));
 
   obj = Object.create(DBScan.prototype);
@@ -25,17 +25,12 @@ DBScan.prototype.run = function (callback) {
   var c = 0;
 
   for (var article in this.data) {
-
-    if (!this.isVisited(article)) { // if article hasn't been visited
-
+    if (!this.isVisited(article)) { // only articles that haven't been visited
       this.visited.push(article); // mark as visited
 
-      var neighbours = this.getNeighbours(article); // get article's neighbours
+      var neighbours = this.getNeighbours(article); // get articles neighbours
 
-      if (neighbours.length === 0) { // article has no neighbours
-        c++;
-        this.clusters[c] = [article]; // initialises cluster with a single article
-      } else {
+      if (neighbours.length >= this.minPoints) {
         c++;
         this.expandCluster(article, neighbours, c); // expands cluster
       }
@@ -44,20 +39,22 @@ DBScan.prototype.run = function (callback) {
 
   var end = new Date().getTime();
   console.log('done in ' + (end - start) + 'ms.');
+
   callback(null, this.clusters);
 };
 
 DBScan.prototype.isVisited = function (doc) {
-  return (this.visited.indexOf(doc) === -1) ? false : true;
+  return (this.visited.indexOf(doc) !== -1) ? true : false;
 };
 
-DBScan.prototype.expandCluster = function (doc, neighbours, c) {
-  this.clusters[c] = [doc]; // adding doc to cluster
+DBScan.prototype.expandCluster = function (p, neighbours, c) {
+  // this.clusters[c] = [p]; // adding document p to cluster c
 
   for (n in neighbours) {
     if (!this.isVisited(neighbours[n])) {
       this.visited.push(neighbours[n]);
       var neighboursNew = this.getNeighbours(neighbours[n]); // what about these neighbours, they should be marked as visited.
+      this.visited = this.visited.concat(neighboursNew); // TODO: A BETTER SOLUTION, DISCUSS WITH STEVEN...
       if (neighboursNew.length >= this.minPoints)
         neighbours = this.merge(neighbours, neighboursNew);
     }

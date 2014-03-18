@@ -60,17 +60,15 @@ function Aggregator () {
     c.save(cb);
   };
 
-  // creates clusters
+  // creates clusters by running dbscan
   var clusterVectors = function () {
     dbscan({data: self.articles}).run(function (err, clusters) {
-      
       async.each(Object.keys(clusters), function (key, done) {
         createCluster(clusters[key], done);
       }, function (err) {
         console.log('created clusters');
         self.emitter.emit('done');
       });
-      
     });
   };
 

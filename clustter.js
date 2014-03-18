@@ -6,7 +6,8 @@ var async = require('async'),
     Article = require('./models/article.js')(DB),
     Cluster = require('./models/cluster.js')(DB),
     Dictionary = require('./models/dictionary.js')(DB),
-    Story = require('./models/story.js')(DB);
+    Story = require('./models/story.js')(DB),
+    argv = require('optimist').argv;
 
 // opening database connection
 DB.on('error', console.error.bind(console, 'database error.'));
@@ -25,21 +26,31 @@ var models = { article: Article, dictionary: Dictionary, cluster: Cluster, robot
 function init () {
   console.log('Clustter\n========');
   console.log('database... ok');
+
+  if (argv.cleandb || argv.c) {
+    cleanDB(); // -cleandb
+  } else {
+    run();
+  }
+};
+
+function run () {
   modules.forEach(function (module) {
     module.init(models);
   });
   scraper.run();
   // aggregator.run();
   // summarizer.run();
-};
+}
 
 // clears a whole database collection
 function clearCollection (model, cb) { (models[model] === Robot || models[model] === Story) ? cb(null) : models[model].remove({}).exec(cb); }; 
 
 // cleans db for next run
 function cleanDB () {
+  console.log('cleaning database...');
   async.each(Object.keys(models), clearCollection, function (err) {
-    console.log('finsihed cleaning database for next run');
+    console.log('finsihed cleaning database.');
     console.log('quitting program');
     process.exit(0);
   });
@@ -60,5 +71,3 @@ summarizer.emitter.on('done', function () {
   console.log('summarizer has finished');
   cleanDB();
 });
-
-// cleanDB();

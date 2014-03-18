@@ -64,31 +64,37 @@ function Scraper () {
     console.log('processing', queue.length, 'articles');
 
     async.each(queue, function (url, done) {
-      request(url).pipe(extractor(url, function (err, result) {
-        if (err) {
-          console.log(new Error('Could not parse article.'));
+      request(url)
+        .on('error', function (err) {
+          console.error(err);
           done();
-        } else {
-          var articleModel = self.models.article;
-          var article = new articleModel;
-          article.title = result.title;
-          article.story = htmlToText.fromString(result.text);
-          article.token = articleModel.tokenise(article.story);
-          article.wordFrequency = articleModel.getWordFrequency(article.token);
-          article.wordCount = article.token.length //article.story.match(/\S+/g).length; which one to use?
-          article.tags = keywords.extract(article.story, { language: 'english', return_changed_case: true });
-          article.url = url;
-
-          article.save(function (err, article) {
-            if (err) { console.log(new Error('Database failed.')); }
-            else {
-              self.models.dictionary.documentFrequency(article);
-              console.log('new article:', article._id);
-            }
+        })
+        .pipe(extractor(url, function (err, result) {
+          if (err) {
+            console.error(new Error('Could not parse article.'));
             done();
-          });
-        }
-      }));
+          } else {
+            var articleModel = self.models.article;
+            var article = new articleModel;
+            article.title = result.title;
+            article.story = htmlToText.fromString(result.text);
+            article.token = articleModel.tokenise(article.story);
+            article.wordFrequency = articleModel.getWordFrequency(article.token);
+            article.wordCount = article.token.length //article.story.match(/\S+/g).length; which one to use?
+            article.tags = keywords.extract(article.story, { language: 'english', return_changed_case: true });
+            article.url = url;
+
+            article.save(function (err, article) {
+              if (err) { console.log(new Error('Database failed.')); }
+              else {
+                self.models.dictionary.documentFrequency(article);
+                console.log('new article:', article._id);
+              }
+              done();
+            });
+          }
+        })
+      );
     },
     function (err) {
       self.emitter.emit('done');
@@ -123,14 +129,16 @@ function Scraper () {
     });
 
     queue = []; // reset queue
+
     async.parallel([
       updateData,
       self.checkConnection
     ], function (err, result) {
       if (!err)
         c.queue(roots); // crawl roots for links
-      else
-        return err;
+      else {
+        console.log(new Error('No internet connection'));
+      }
     });
   };
 

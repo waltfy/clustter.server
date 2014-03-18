@@ -26,6 +26,7 @@ function Summarizer () {
     var content = '', titles = [],
         story = new self.models.story;
 
+    // aggregate content
     cluster.articles.forEach(function (article) {
       story.refs.push(article.url);
       titles.push(article.title);
@@ -35,9 +36,11 @@ function Summarizer () {
     titlegen.feed(titles);
 
     (titles.length > 1) ? story.title = titlegen() : story.title = titles[0];
+    
     if (story.title === '')
       story.title = 'bad story';
 
+    // 
     story.content = summaryTool({ corpus: content, nSentences: (cluster.articles.length * 2) }).sentences;
 
     request('http://uclassify.com/browse/mvazquez/News Classifier/ClassifyText?readkey=' + classifierApi.read + '&text=' + encodeURI(story.content.join('  ')) + '&output=json&version=1.01', function (err, res, body) {
