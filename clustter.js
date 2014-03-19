@@ -28,7 +28,7 @@ function init () {
   console.log('database... ok');
 
   if (argv.cleandb || argv.c) {
-    cleanDB(); // -cleandb
+    cleanDB(run); // -cleandb
   } else {
     run();
   }
@@ -47,12 +47,16 @@ function run () {
 function clearCollection (model, cb) { (models[model] === Robot || models[model] === Story) ? cb(null) : models[model].remove({}).exec(cb); }; 
 
 // cleans db for next run
-function cleanDB () {
+function cleanDB (cb) {
   console.log('cleaning database...');
   async.each(Object.keys(models), clearCollection, function (err) {
     console.log('finsihed cleaning database.');
-    console.log('quitting program');
-    process.exit(0);
+    if (typeof cb !== 'undefined')
+      cb();
+    else {
+      console.log('quitting program');
+      process.exit(0);
+    }
   });
 };
 

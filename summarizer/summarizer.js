@@ -23,26 +23,29 @@ function Summarizer () {
   };
 
   var createStory = function (cluster, cb) {
-    var content = '', titles = [],
+    var content = [], titles = [],
         story = new self.models.story;
 
-    // aggregate content
+    // iterate through each article to acquire references, titles and content.
     cluster.articles.forEach(function (article) {
       story.refs.push(article.url);
       titles.push(article.title);
-      content += article.story;
+      if (content.indexOf(article.story) === -1)
+        content.push(article.story);
     });
 
+    // concatenate content
+    content = content.join(' ');
+
+    // title generation
     titlegen.feed(titles);
+    if (titles.length > 1) story.title = titlegen();
+    if (story.title === '' || story.title === undefined) story.title = titles[0];
 
-    (titles.length > 1) ? story.title = titlegen() : story.title = titles[0];
-    
-    if (story.title === '')
-      story.title = 'bad story';
+    // content summarization
+    story.content = summaryTool({ corpus: content, nSentences: 4 }).sentences;
 
-    // 
-    story.content = summaryTool({ corpus: content, nSentences: (cluster.articles.length * 2) }).sentences;
-
+    // category acquired via an api then finally save story
     request('http://uclassify.com/browse/mvazquez/News Classifier/ClassifyText?readkey=' + classifierApi.read + '&text=' + encodeURI(story.content.join('  ')) + '&output=json&version=1.01', function (err, res, body) {
       var response, category;
       try {
@@ -59,7 +62,10 @@ function Summarizer () {
         console.log(new Error('Could not set category.'));
         story.category = 'Miscellaneous';
       } finally {
-        story.save(cb);
+        story.save(function (err, story) {
+          console.log('new story', story._id);
+          cb(err);
+        });
       }
     });
   };
@@ -81,7 +87,7 @@ function Summarizer () {
       getClusters,
       summarizeClusters
     ], function (err, results) {
-      console.log(results[0].length); // clusters
+      console.log('summarized', results[0].length, 'clusters'); // clusters
       self.emitter.emit('done');
     });
   }
