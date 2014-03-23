@@ -28,12 +28,13 @@ function init () {
   console.log('database... ok');
 
   if (argv.cleandb || argv.c) {
-    cleanDB(run); // -cleandb
+    cleanDB(run); // -cleandb or c
   } else {
     run();
   }
 };
 
+// runs clustter
 function run () {
   modules.forEach(function (module) {
     module.init(models);

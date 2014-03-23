@@ -43,7 +43,7 @@ function Summarizer () {
     if (story.title === '' || story.title === undefined) story.title = titles[0];
 
     // content summarization
-    story.content = summaryTool({ corpus: content, nSentences: 4 }).sentences;
+    story.content = summaryTool({ corpus: content, nSentences: 5 }).sentences;
 
     // category acquired via an api then finally save story
     request('http://uclassify.com/browse/mvazquez/News Classifier/ClassifyText?readkey=' + classifierApi.read + '&text=' + encodeURI(story.content.join('  ')) + '&output=json&version=1.01', function (err, res, body) {

@@ -62,7 +62,7 @@ if (cluster.isMaster) {
   };
 
   var server = api.listen(port, function () {
-    console.log('api running on port', port);
+    console.log(cluster.worker.id, 'api running on port', port);
   });
 
   api.get('/', function (req, res) {
