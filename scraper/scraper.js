@@ -113,6 +113,7 @@ function Scraper () {
 
   // runs scraper
   this.run = function () {
+    console.log('scraper started running');
     var c = new crawler({
       callback: function (err, result, $) {
         console.log('scraping:', this.uri);
@@ -134,6 +135,7 @@ function Scraper () {
       updateData,
       self.checkConnection
     ], function (err, result) {
+      console.log('should queue');
       if (!err)
         c.queue(roots); // crawl roots for links
       else {
