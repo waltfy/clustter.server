@@ -18,7 +18,7 @@ if (cluster.isMaster) {
       story = require('./models/story.js')(DB);
       api = express();
 
-  var port = 3000;
+  var port = 5000;
 
   var allowCrossDomain = function(req, res, next) {
     res.header('Access-Control-Allow-Origin', '*');
@@ -33,7 +33,6 @@ if (cluster.isMaster) {
       next();
     }
   };
-
   api.use(allowCrossDomain);
 
   // opening database connection
