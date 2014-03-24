@@ -44,7 +44,6 @@ if (cluster.isMaster) {
 
   function init () {
     getFeed();
-    // setInterval(getFeed, 43200000);
   };
 
   var getFeed = function () {
@@ -70,7 +69,11 @@ if (cluster.isMaster) {
   });
 
   api.get('/stories', function (req, res) {
-    res.jsonp({stories: cachedStories});
+    res.jsonp({ stories: cachedStories });
+  });
+
+  api.get('/story/:id', function (req, res) {
+    res.jsonp({ story: cachedStories[req.params.id] });
   });
 
 }

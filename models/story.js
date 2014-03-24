@@ -12,7 +12,6 @@ function StorySchema () {
     content: {type: Array, required: true },
     refs: { type: Array, default: [] },
     category: { type: String, required: true },
-    // tags: { type : Array , default: [] },
     updated: { type: Date, default: Date.now }
   });
 

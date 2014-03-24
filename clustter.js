@@ -55,7 +55,7 @@ function cleanDB (cb) {
     if (typeof cb !== 'undefined')
       cb();
     else {
-      console.log('quitting program');
+      console.log('quitting clustter...');
       process.exit(0);
     }
   });
