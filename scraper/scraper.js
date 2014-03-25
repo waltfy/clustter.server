@@ -135,9 +135,10 @@ function Scraper () {
       updateData,
       self.checkConnection
     ], function (err, result) {
-      console.log('should queue');
-      if (!err)
+      if (!err) {
+        if (roots.length === 0 ) { console.log(new Error('No robots')); process.exit(1); }
         c.queue(roots); // crawl roots for links
+      }
       else {
         console.log(new Error('No internet connection'));
       }
