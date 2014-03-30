@@ -1,13 +1,13 @@
+var Schema = require('mongoose').Schema,
+    Natural = require('natural');
+    Natural.PorterStemmer.attach();
+
 module.exports = function (db) {
   return db.model('Article', ArticleSchema());
 }
 
 // Article schema
 function ArticleSchema () {
-
-  var Schema = require('mongoose').Schema,
-      Natural = require('natural');
-      Natural.PorterStemmer.attach();
 
   var ArticleSchema = new Schema({
     title: {type: String, required: true},

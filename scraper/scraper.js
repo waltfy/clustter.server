@@ -60,10 +60,10 @@ function Scraper () {
   };
 
   // extracts articles and adds them to database while updating dictionary
-  var parseArticles = function () {
+  var parseArticles = function (cb) {
     console.log('processing', queue.length, 'articles');
 
-    async.each(queue, function (url, done) {
+    async.eachLimit(queue, 10, function (url, done) {
       request(url)
         .on('error', function (err) {
           console.error(err);
@@ -76,6 +76,7 @@ function Scraper () {
           } else {
             var articleModel = self.models.article;
             var article = new articleModel;
+
             article.title = result.title;
             article.story = htmlToText.fromString(result.text);
             article.token = articleModel.tokenise(article.story);
@@ -85,19 +86,21 @@ function Scraper () {
             article.url = url;
 
             article.save(function (err, article) {
-              if (err) { console.log(new Error('Database failed.')); }
+              if (err) { console.log(new Error('Could not save article.')); }
               else {
-                self.models.dictionary.documentFrequency(article);
                 console.log('new article:', article._id);
+                self.models.dictionary.documentFrequency(article, function (err, result) {
+                  // console.log('updated dictionary');
+                });
+                done();
               }
-              done();
             });
           }
         })
       );
     },
     function (err) {
-      self.emitter.emit('done');
+      cb(err, 'scraper finished');
     });
   };
 
@@ -112,7 +115,7 @@ function Scraper () {
   };
 
   // runs scraper
-  this.run = function () {
+  this.run = function (cb) {
     console.log('scraper started running');
     var c = new crawler({
       callback: function (err, result, $) {
@@ -125,7 +128,7 @@ function Scraper () {
         console.log('>>>>', 'done.');
       },
       onDrain: function () {
-        parseArticles();
+        parseArticles(cb);
       }
     });
 

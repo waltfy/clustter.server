@@ -61,13 +61,14 @@ function Aggregator () {
   };
 
   // creates clusters by running dbscan
-  var clusterVectors = function () {
+  var clusterVectors = function (cb) {
     dbscan({data: self.articles}).run(function (err, clusters) {
       async.each(Object.keys(clusters), function (key, done) {
         createCluster(clusters[key], done);
       }, function (err) {
-        console.log('created clusters');
-        self.emitter.emit('done');
+        // console.log('created clusters');
+        // self.emitter.emit('done');
+        cb(err, 'created clusters');
       });
     });
   };
@@ -80,12 +81,12 @@ function Aggregator () {
   };
 
   // runs the aggregator
-  this.run = function () {
+  this.run = function (cb) {
     async.series([
       getDictionary,
       getArticles
     ], function (err, result) {
-      clusterVectors();
+      clusterVectors(cb);
     });
   };
 }

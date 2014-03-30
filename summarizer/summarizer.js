@@ -81,14 +81,14 @@ function Summarizer () {
     console.log('summarizer... initialised');
   };
 
-  this.run = function () {
+  this.run = function (cb) {
     console.log('summarizer running');
     async.series([
       getClusters,
       summarizeClusters
     ], function (err, results) {
       console.log('summarized', results[0].length, 'clusters'); // clusters
-      self.emitter.emit('done');
+      cb(err, 'done');
     });
   }
 }

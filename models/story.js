@@ -1,11 +1,11 @@
+var Schema = require('mongoose').Schema;
+
 module.exports = function (db) {
   return db.model('Story', StorySchema());
 }
 
 // Story schema
 function StorySchema () {
-
-  var Schema = require('mongoose').Schema;
 
   var StorySchema = new Schema({
     title: { type: String, required: true },
