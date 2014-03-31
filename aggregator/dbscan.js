@@ -17,7 +17,7 @@ var DBScan = function (args) {
 
 DBScan.prototype.run = function (callback) {
   // initialising and benchmarking
-  console.log('Running DBScan...');
+  console.log('running DBScan...');
   var start = new Date().getTime();
 
   var self = this;
@@ -38,7 +38,7 @@ DBScan.prototype.run = function (callback) {
   }
 
   var end = new Date().getTime();
-  console.log('done in ' + (end - start) + 'ms.');
+  console.log('>>>> completed in', (end - start) + 'ms.');
 
   callback(null, this.clusters);
 };

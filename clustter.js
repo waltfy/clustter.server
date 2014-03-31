@@ -1,57 +1,70 @@
-// dependencies
-var async = require('async'),
-    Mongoose = require('mongoose'),
-    DB = Mongoose.createConnection('mongodb://localhost/clustter'),
-    Robot = require('./models/robot.js')(DB),
-    Article = require('./models/article.js')(DB),
-    Cluster = require('./models/cluster.js')(DB),
-    Dictionary = require('./models/dictionary.js')(DB),
-    Story = require('./models/story.js')(DB),
-    argv = require('optimist').argv;
+process.title = 'Clustter'; // sets the process title
 
-// opening database connection
-DB.on('error', console.error.bind(console, 'database error.'));
-DB.on('open', init);
+// main dependencies
+var async = require('async');
+var mongoose = require('mongoose');
+var DB = mongoose.createConnection('mongodb://localhost/clustter'); // opening database connection
+var argv = require('optimist').argv;
 
-// local variables
-var modules = [
-  scraper = require('./scraper/scraper'),
-  aggregator = require('./aggregator/aggregator'),
-  summarizer = require('./summarizer/summarizer') // summarizer
-];
+// database event listeners
+DB.on('error', console.error.bind(console, new Error('database error.'))); // error
+DB.on('open', init); // initialises clustter
 
-var models = { article: Article, dictionary: Dictionary, cluster: Cluster, robot: Robot, story: Story };
-
-// init all modules and start scraper
-function init () {
-  console.log('Clustter\n========');
-  console.log('database... ok');
-
-  if (argv.cleandb || argv.c) {
-    cleanDB(run); // -cleandb or c
-  } else {
-    run();
-  }
+//own module dependencies
+var modules = {
+  scraper: require('./scraper/scraper'),
+  aggregator: require('./aggregator/aggregator'),
+  summarizer: require('./summarizer/summarizer')
 };
 
-// runs clustter
-function run () {
-  modules.forEach(function (module) {
-    module.init(models);
-  });
-  //scraper.run();
-  aggregator.run();
-  // summarizer.run();
-}
+// // models dependencies
+var models = { 
+  robot: require('./models/robot.js')(DB),
+  article: require('./models/article.js')(DB),
+  cluster: require('./models/cluster.js')(DB),
+  dictionary: require('./models/dictionary.js')(DB),
+  story: require('./models/story.js')(DB)
+};
 
-// clears a whole database collection
-function clearCollection (model, cb) { (models[model] === Robot || models[model] === Story) ? cb(null) : models[model].remove({}).exec(cb); }; 
+function init () {
+  console.log(process.title, '\n========');
+  initModules();
+  if (argv.cleandb || argv.c)
+    cleanDB(run); // -cleandb or c
+  else
+    run();
+};
+
+// initialises all of clustter's modules
+function initModules () {
+  Object.keys(modules).forEach(function (k) {
+    modules[k].init(models);
+  });
+};
+
+// runs tasks as async.series, scrape->aggregate->summarize
+function run () {
+  async.series([
+    modules.scraper.run,
+    modules.aggregator.run,
+    modules.summarizer.run
+  ],
+  function (err, result) {
+    console.log('clustter complete');
+    cleanDB();
+  });
+};
+
+// clears a given database collection
+function clearCollection (model, cb) {
+  (model === 'robot' || model === 'story') ? cb(null) : models[model].remove({}).exec(cb);
+}; 
 
 // cleans db for next run
 function cleanDB (cb) {
   console.log('cleaning database...');
   async.each(Object.keys(models), clearCollection, function (err) {
-    console.log('finsihed cleaning database.');
+    console.log('>>>> done.');
     if (typeof cb !== 'undefined')
       cb();
     else {
@@ -60,19 +73,3 @@ function cleanDB (cb) {
     }
   });
 };
-
-/* event listeners */
-scraper.emitter.on('done', function () {
-  console.log('scraper has finished');
-  aggregator.run();
-});
-
-aggregator.emitter.on('done', function () {
-  console.log('aggregator has finished');
-  summarizer.run();
-});
-
-summarizer.emitter.on('done', function () {
-  console.log('summarizer has finished');
-  cleanDB();
-});
