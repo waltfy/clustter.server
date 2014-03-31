@@ -18,11 +18,10 @@ var modules = {
 };
 
 // models
-var models = { 
-  robot: require('./models/robot.js')(DB),
+var models = {
+  robots: require('./robots.json'), // static file
   article: require('./models/article.js')(DB),
   cluster: require('./models/cluster.js')(DB),
-  dictionary: require('./models/dictionary.js')(DB),
   story: require('./models/story.js')(DB)
 };
 
@@ -58,7 +57,7 @@ function run () {
 
 // clears a given database collection
 function clearCollection (model, cb) {
-  (model === 'robot' || model === 'story') ? cb(null) : models[model].remove({}).exec(cb);
+  (model === 'robots' || model === 'story') ? cb(null) : models[model].remove({}).exec(cb);
 }; 
 
 // cleans db for next run

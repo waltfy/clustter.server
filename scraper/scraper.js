@@ -20,14 +20,12 @@ String.prototype.stripQueryAndHash = function () { return this.split('?')[0].spl
 
 // queries database for robots and returns and object {roots: [], templates: RegExp String};
 var getRobots = function (cb) {
-  self.models.robot.find({}).lean().exec(function (err, robots) {
-    robots.forEach(function (r) {
-      roots.push(r.root);
-      template.push(r.template);
-    });
-    template = new RegExp(template.join('|'))
-    cb(null, 'loaded robots');
+  self.models.robots.forEach(function (r) {
+    roots.push(r.root);
+    template.push(r.template);
   });
+  template = new RegExp(template.join('|'))
+  cb(null, 'loaded robots');
 };
 
 // queries database for articles and returns its urls only
