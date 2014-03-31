@@ -39,8 +39,8 @@ function run () {
   modules.forEach(function (module) {
     module.init(models);
   });
-  scraper.run();
-  //aggregator.run();
+  //scraper.run();
+  aggregator.run();
   // summarizer.run();
 }
 
