@@ -17,7 +17,7 @@ var modules = {
   summarizer: require('./summarizer/summarizer')
 };
 
-// // models dependencies
+// models
 var models = { 
   robot: require('./models/robot.js')(DB),
   article: require('./models/article.js')(DB),
@@ -26,6 +26,7 @@ var models = {
   story: require('./models/story.js')(DB)
 };
 
+// initialise clustter
 function init () {
   console.log(process.title, '\n========');
   initModules();
