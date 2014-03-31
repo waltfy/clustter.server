@@ -1,0 +1,14 @@
+[
+  {
+    "root": "http://www.bbc.co.uk/news/",
+    "template": "http://www.bbc.co.uk/news/(?!in-pictures)[^-]+([^w]+-[0-9s]*|-[0-9s]0-9)"   
+  },
+  {
+    "root": "http://www.theguardian.com/uk",
+    "template": "http://www.theguardian.com/[a-z-]+/[0-9]+/[a-z]+/[0-9]+/.*"
+  },
+  {
+    "root": "http://uk.news.yahoo.com/",
+    "template": "http://uk.news.yahoo.com/(?!video)[a-z.]+.+.html"
+  }
+]
