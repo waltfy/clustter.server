@@ -12,7 +12,7 @@ DB.on('open', init); // initialises clustter
 
 //own module dependencies
 var modules = {
-  scraper: require('./scraper/scraper-new'),
+  scraper: require('./scraper/scraper'),
   aggregator: require('./aggregator/aggregator'),
   summarizer: require('./summarizer/summarizer')
 };
@@ -44,14 +44,13 @@ function initModules () {
 
 // runs tasks as async.series, scrape->aggregate->summarize
 function run () {
-  console.log('running...');
   async.series([
     modules.scraper.run,
     modules.aggregator.run,
     modules.summarizer.run
   ],
   function (err, result) {
-    console.log('finished run');
+    console.log('clustter complete');
     cleanDB();
   });
 };
@@ -65,11 +64,11 @@ function clearCollection (model, cb) {
 function cleanDB (cb) {
   console.log('cleaning database...');
   async.each(Object.keys(models), clearCollection, function (err) {
-    console.log('finsihed cleaning database.');
+    console.log('>>>> done.');
     if (typeof cb !== 'undefined')
       cb();
     else {
-      console.log('exiting');
+      console.log('quitting clustter...');
       process.exit(0);
     }
   });
