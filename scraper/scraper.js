@@ -49,14 +49,12 @@ var scrape = function (cb) {
     request({uri: root}, function (err, res, body) {
       var $ = cheerio.load(body);
       console.log('scraping:', root);
-      
       $('a').each(function (key, link) {
         try {
           link = url.resolve(root, $(this).attr('href')).stripQueryAndHash();  
         } catch (e) {
           link = root;
         }
-
         if (link.match(template) && archived.indexOf(link) === -1 && queue.indexOf(link) === -1)
           queue.push(link);
       });

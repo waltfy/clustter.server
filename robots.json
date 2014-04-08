@@ -9,6 +9,6 @@
   },
   {
     "root": "http://uk.news.yahoo.com/",
-    "template": "http://uk.news.yahoo.com/(?!video)[a-z.]+.+.html"
+    "template": "(http|https)://uk.news.yahoo.com/(?!video|[a-z-]+/archive).+.html"
   }
 ]
