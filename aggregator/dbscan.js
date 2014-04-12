@@ -16,12 +16,9 @@ var DBScan = function (args) {
 };
 
 DBScan.prototype.run = function (callback) {
-  // initialising and benchmarking
+  // initialising and timing run
   console.log('running DBScan...');
   var start = new Date().getTime();
-
-  var self = this;
-
   var c = 0;
 
   for (var article in this.data) {

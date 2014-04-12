@@ -7,24 +7,27 @@ var request = require('request');
 var async = require('async');
 var url = require('url');
 
-var name = 'scraper';
+var name = 'scraper'; // module name
 var self = this;
 
-var roots = [],
-    template = [],
-    archived = [],
-    queue = [];
+var roots = [], // these are the roots to be scraped for links
+    template = null, // a concatenation of all regular expressions to be matched
+    archived = [], // urls that have already been scraped
+    queue = []; // list of links to potential articles to be parsed
 
 // removes querystring and hash from url
-String.prototype.stripQueryAndHash = function () { return this.split('?')[0].split('#')[0]; };
+String.prototype.stripQueryAndHash = function () { return this.split('?')[0].split('#')[0]; }; // removes query and hash for url
 
 // queries database for robots and returns and object {roots: [], templates: RegExp String};
 var getRobots = function (cb) {
+  var temp = [];
+
   self.models.robots.forEach(function (r) {
     roots.push(r.root);
-    template.push(r.template);
+    temp.push(r.template);
   });
-  template = new RegExp(template.join('|'))
+
+  template = new RegExp(temp.join('|')); // concatenation of all regular expressions into one
   cb(null, 'loaded robots');
 };
 
@@ -36,7 +39,7 @@ var setUrls = function (cb) {
   });
 };
 
-// checks for internet connection returning a boolean
+// checks for internet connection returning a boolean, `true` if connected, `false` otherwise
 var checkConnection = function (cb) {
   require('dns').resolve('www.google.com', function (err, addresses) {
     return cb(err, !(typeof addresses === 'undefined'));
@@ -81,15 +84,15 @@ var parseArticles = function (cb) {
         } else {
           var articleModel = self.models.article;
           var article = new articleModel;
-
+          // creates article
           article.title = result.title;
           article.story = htmlToText.fromString(result.text);
           article.token = articleModel.tokenise(article.story);
           article.wordFrequency = articleModel.getWordFrequency(article.token);
-          article.wordCount = article.token.length //article.story.match(/\S+/g).length; which one to use?
+          article.wordCount = article.token.length
           article.tags = keywords.extract(article.story, { language: 'english', return_changed_case: true });
           article.url = url;
-
+          // saves the article
           article.save(function (err, article) {
             if (err) { console.log(new Error('Could not save article.')); }
             else {
@@ -102,11 +105,11 @@ var parseArticles = function (cb) {
     );
   },
   function (err) {
-    cb(err, 'done');
+    cb(err, 'done'); // finished parsing all articles
   });
 };
 
-// public methods + properties
+// public methods & properties
 module.exports = {
   init: function (models) {
     self.models = models;
