@@ -8,11 +8,4 @@ suite('scraper', function () {
     assert.equal('http://visionmedia.github.io/mocha/', url);
   });
 
-  test('checks for internet connection', function (done) {
-    scraper.checkConnection(function (err, connected) {
-      assert.equal(connected, true);
-      done();
-    });
-  });
-
 });

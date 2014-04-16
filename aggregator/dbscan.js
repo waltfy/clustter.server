@@ -46,7 +46,6 @@ DBScan.prototype.isVisited = function (doc) {
 
 DBScan.prototype.expandCluster = function (p, neighbours, c) {
   // this.clusters[c] = [p]; // adding document p to cluster c
-
   for (n in neighbours) {
     if (!this.isVisited(neighbours[n])) {
       this.visited.push(neighbours[n]);
@@ -85,17 +84,16 @@ DBScan.prototype.merge = function (a, b) {
 
 Math.dotProduct = function (v1, v2) {
   var dot = 0,
-      min = (Object.keys(v1).length <= Object.keys(v2).length) ? v1 : v2;
+      min = (Object.keys(v1).length <= Object.keys(v2).length) ? v1 : v2; // selecting the smaller vector
 
   for (word in min)
-    dot += (v1[word] || 0) * (v2[word] || 0);
+    dot += (v1[word] || 0) * (v2[word] || 0); // if `v1[word]` or `v2[word]` is not present, just set it to 0.
 
   return dot;
 };
 
 Math.magnitude = function (v) {
-
-  return Math.sqrt(Math.dotProduct(v, v));
+  return Math.sqrt(Math.dotProduct(v, v)); // square root of the dot product of this vector
 };
 
 Math.cosineSimilarity = function (v1, v2) {
@@ -104,11 +102,9 @@ Math.cosineSimilarity = function (v1, v2) {
       mag2 = Math.magnitude(v2);
       result = dotProduct / (mag1 * mag2);
 
-  if (isNaN(result)) {
-    return 0;
-  } else {
-   return result;
-  }
+  if (isNaN(result)) return 0;
+  else return result;
+
 };
 
 module.exports = DBScan;

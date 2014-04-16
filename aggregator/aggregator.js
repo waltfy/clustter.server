@@ -9,6 +9,14 @@ var dictionary = {},
     articles = {},
     corpus = null;
 
+var tf = function (word, article) {
+  return article.wordFrequency[word] / article.wordCount;
+};
+
+var idf = function (word, corpus) {
+  return Math.log(corpus / dictionary[word]);
+};
+
 var computeDictionary = function (cb) {
   self.models.article
     .find({})
@@ -63,7 +71,7 @@ var createCluster = function (cluster, cb) {
 var toVector = function (article, corpus) {
   var vector = {}; // representing document as a vector
   for (var word in article.wordFrequency) {
-    vector[word] = (article.wordFrequency[word] / article.wordCount) * Math.log(corpus / dictionary[word]); // tf-idf score
+    vector[word] = tf(word, article) * idf(word, corpus); // tf-idf score
     if (typeof dictionary[word] === 'undefined')
       console.log('[WARN]:', word, '-', 'not in dictionary'); // need to handle it better
   }
