@@ -33,7 +33,8 @@
     "sum": "~0.1.1",
     "titlegen": "0.0.2",
     "optimist": "~0.6.1",
-    "cheerio": "^0.13.1"
+    "cheerio": "^0.13.1",
+    "twitter": "^0.2.9"
   },
   "devDependencies": {
     "mocha": "~1.17.1",
