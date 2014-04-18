@@ -2,9 +2,16 @@
 var async = require('async'),
     summaryTool = require('sum'), // require('node-summary');
     titleGen = require('titlegen'),
-    request = require('request');
+    request = require('request'),
+    api_keys = require('./api_keys.json'), // static file containing keys
+    twitter = require('twitter'),
+    tweet = new twitter({
+      consumer_key: api_keys.twitter.consumer_key,
+      consumer_secret: api_keys.twitter.consumer_secret,
+      access_token_key: api_keys.twitter.access_token_key,
+      access_token_secret: api_keys.twitter.access_token_secret
+    });
 
-var api = { read: 'ofGRa4pRnCvAXv2pnMirYMuaDLc' };
 var name = 'summarizer';
 var self = this;
 
@@ -46,7 +53,7 @@ var createStory = function (cluster, cb) {
   story.content = summaryTool({ corpus: content, nSentences: 5 }).sentences;
 
   // category acquired via an api then finally save story
-  request('http://uclassify.com/browse/mvazquez/News Classifier/ClassifyText?readkey=' + api.read + '&text=' + encodeURI(story.content.join('  ')) + '&output=json&version=1.01', function (err, res, body) {
+  request('http://uclassify.com/browse/mvazquez/News Classifier/ClassifyText?readkey=' + api_keys.classifier.read + '&text=' + encodeURI(story.content.join('  ')) + '&output=json&version=1.01', function (err, res, body) {
     var response, category;
     try {
       response = JSON.parse(body);
@@ -70,6 +77,14 @@ var createStory = function (cluster, cb) {
   });
 };
 
+var tweetStatus = function (stories, cb) {
+  var message = 'Just clusttered ' + stories + ' new stories. http://www.clustter.in, #clustter';
+  tweet
+    .updateStatus(message, function (data) {
+      cb();
+    });
+};
+
 module.exports = {
   init: function (models) {
     self.models = models;
@@ -79,11 +94,14 @@ module.exports = {
     console.log(name, '\n>>>> started');
     async.waterfall([
       getClusters,
-      summarizeClusters
+      summarizeClusters,
     ], function (err, result) {
       console.log('stories:\n>>>>', result);
       console.log(name, '\n>>>> done');
-      cb(err);
+      tweetStatus(result, function (data) {
+        console.log('posted');
+        cb(err);  
+      });
     });
   }
 };
