@@ -1,4 +1,6 @@
-process.title = 'Clustter'; // sets the process title
+var conf = require('./conf.json');
+process.title = conf.name; // sets the process title
+process.env.NODE_ENV = conf.env; // sets the environment
 
 // main dependencies
 var async = require('async');

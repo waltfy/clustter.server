@@ -1,6 +1,6 @@
 var DBScan = function (args) {
   if (typeof args.data === 'undefined') console.error(Error('No data provided.'));
-  if (typeof args.eps === 'undefined') args.eps = 0.5;
+  if (typeof args.eps === 'undefined') args.eps = 0.4;
   if (typeof args.minPoints === 'undefined') args.minPoints = 2;
   if (Object.keys(args.data).length === 0) console.error(Error('No articles found'));
 
@@ -36,7 +36,6 @@ DBScan.prototype.run = function (callback) {
 
   var end = new Date().getTime();
   console.log('>>>> completed in', (end - start) + 'ms.');
-
   callback(null, this.clusters);
 };
 
@@ -49,7 +48,7 @@ DBScan.prototype.expandCluster = function (p, neighbours, c) {
   for (n in neighbours) {
     if (!this.isVisited(neighbours[n])) {
       this.visited.push(neighbours[n]);
-      var neighboursNew = this.getNeighbours(neighbours[n]); // what about these neighbours, they should be marked as visited.
+      var neighboursNew = this.getNeighbours(neighbours[n]); // what about these neighbours, should be marked as visited?
       this.visited = this.visited.concat(neighboursNew); // TODO: A BETTER SOLUTION, DISCUSS WITH STEVEN...
       if (neighboursNew.length >= this.minPoints)
         neighbours = this.merge(neighbours, neighboursNew);
@@ -104,7 +103,6 @@ Math.cosineSimilarity = function (v1, v2) {
 
   if (isNaN(result)) return 0;
   else return result;
-
 };
 
 module.exports = DBScan;

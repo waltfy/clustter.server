@@ -1,3 +1,4 @@
 node_modules/
 summarizer/api_keys.json
+conf.json
 .DS_Store

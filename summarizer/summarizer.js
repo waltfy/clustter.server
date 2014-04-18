@@ -78,6 +78,7 @@ var createStory = function (cluster, cb) {
 };
 
 var tweetStatus = function (stories, cb) {
+  if (process.env.NODE_ENV !== 'production') return cb();
   var message = 'Just clusttered ' + stories + ' new stories. http://www.clustter.in, #clustter';
   tweet
     .updateStatus(message, function (data) {
