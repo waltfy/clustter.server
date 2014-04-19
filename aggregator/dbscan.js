@@ -1,6 +1,6 @@
 var DBScan = function (args) {
   if (typeof args.data === 'undefined') console.error(Error('No data provided.'));
-  if (typeof args.eps === 'undefined') args.eps = 0.4;
+  if (typeof args.eps === 'undefined') args.eps = 0.5;
   if (typeof args.minPoints === 'undefined') args.minPoints = 2;
   if (Object.keys(args.data).length === 0) console.error(Error('No articles found'));
 
