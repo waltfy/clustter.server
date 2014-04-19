@@ -96,7 +96,6 @@ function isVisited (e) {
 	return (visited.indexOf(e) !== -1) ? true : false;
 }
 
-
 /** Private: Merges two arrays avoiding duplication
   a - Array
   b - Array

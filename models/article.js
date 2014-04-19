@@ -22,7 +22,6 @@ function ArticleSchema () {
 
   // Tokenises and stems the Article
   ArticleSchema.statics.tokenise = function (story) {
-
     return story.tokenizeAndStem();
   };
 

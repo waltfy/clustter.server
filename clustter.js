@@ -12,7 +12,7 @@ var argv = require('optimist').argv;
 DB.on('error', console.error.bind(console, new Error('database error.'))); // error
 DB.on('open', init); // initialises clustter
 
-//own module dependencies
+// own module dependencies
 var modules = {
   scraper: require('./scraper/scraper'),
   aggregator: require('./aggregator/aggregator'),

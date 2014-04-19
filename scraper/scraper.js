@@ -71,7 +71,8 @@ var scrape = function (cb) {
 var parseArticles = function (cb) {
   console.log('parsing', queue.length, 'articles');
 
-  async.eachLimit(queue, 15, function (url, done) {
+  // async.eachLimit(queue, 15, function (url, done) {
+  async.each(queue, function (url, done) {
     request(url)
       .on('error', function (err) {
         console.error(err);

@@ -52,6 +52,9 @@ var computeVectors = function (cb) {
 var clusterVectors = function (cb) {
   dbscan.run({ data: articles }, function (err, clusters) {
     async.each(Object.keys(clusters), function (key, done) {
+      clusters[key].forEach(function (article) {
+        console.log(articles[article].url);
+      });
       createCluster(clusters[key], done);
     }, function (err) {
       cb(err, Object.keys(clusters).length);
@@ -81,7 +84,6 @@ var toVector = function (article, corpus) {
 
 // public methods + properties
 module.exports = {
-  name: 'aggregator',
   init: function (models) {
     self.models = models;
     console.log(name, '\n>>>> ready');

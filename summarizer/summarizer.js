@@ -15,12 +15,13 @@ var async = require('async'),
 var name = 'summarizer';
 var self = this;
 
+/** Private: Retrievs clusters from database */
 var getClusters = function (cb) {
-    self.models.cluster
-      .find({})
-      .populate({path: 'articles'})
-      .lean()
-      .exec(cb);
+  self.models.cluster
+    .find({})
+    .populate({path: 'articles'})
+    .lean()
+    .exec(cb);
 };
 
 var summarizeClusters = function (clusters, cb) {
