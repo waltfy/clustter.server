@@ -42,6 +42,7 @@ var computeVectors = function (cb) {
         articles[doc._id] = { vector: toVector(doc, docs.length), url: doc.url };
         done();
       }, function (err) {
+        // require('fs').writeFile("./articles.json", JSON.stringify(articles, null, 2), console.log.bind(console, 'saved articles')); // use this to output a sample of articles as vectors
         cb(err, Object.keys(articles).length);  
       });
     });
@@ -49,7 +50,7 @@ var computeVectors = function (cb) {
 
 // creates clusters by running dbscan
 var clusterVectors = function (cb) {
-  dbscan({ data: articles }).run(function (err, clusters) {
+  dbscan.run({ data: articles }, function (err, clusters) {
     async.each(Object.keys(clusters), function (key, done) {
       createCluster(clusters[key], done);
     }, function (err) {
@@ -95,7 +96,7 @@ module.exports = {
       console.log('dictionary size:\n>>>>', result[0]);
       console.log('vectors:\n>>>>', result[1]);
       console.log('clusters:\n>>>>', result[2]);
-      console.log(name, '\n>>>> done');
+      console.log(name, '\n>>>> done', new Date());
       cb(err);
     });
   }

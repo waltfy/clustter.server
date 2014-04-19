@@ -79,9 +79,10 @@ var createStory = function (cluster, cb) {
 
 var tweetStatus = function (stories, cb) {
   if (process.env.NODE_ENV !== 'production') return cb();
-  var message = 'Just clusttered ' + stories + ' new stories. http://www.clustter.in, #clustter';
+  var message = 'New story feed available with ' + stories + ' new stories - http://www.clustter.in. #clustter';
   tweet
     .updateStatus(message, function (data) {
+      console.log('updated twitter status');
       cb();
     });
 };
@@ -98,9 +99,8 @@ module.exports = {
       summarizeClusters,
     ], function (err, result) {
       console.log('stories:\n>>>>', result);
-      console.log(name, '\n>>>> done');
+      console.log(name, '\n>>>> done', new Date());
       tweetStatus(result, function (data) {
-        console.log('posted');
         cb(err);  
       });
     });

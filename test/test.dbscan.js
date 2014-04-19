@@ -1,5 +1,5 @@
 var assert = require('assert'),
-    dbscan = require('../aggregator/dbscan')({ data: {} });
+    dbscan = require('../aggregator/dbscan');
 
 suite('dbscan', function() {
   test('dot product of vectors {a:1, b:2, c:3} • {a:3, b:2, c:1, d:2} equals 10', function () {
@@ -12,14 +12,6 @@ suite('dbscan', function() {
 
   test('cosine similarity of vectors {a:1, b:2, c:3} • {a:3, b:2, c:1, d:2} equals 0.7142857142857143', function () {
     assert.equal(0.629940788348712, Math.cosineSimilarity({ a: 1, b: 2, c: 3 }, { a: 3, b: 2, c: 1, d: 2 }));
-  });
-
-  test('DBScan.isVisited', function () {
-    assert.equal(false, dbscan.isVisited('someid'));
-    dbscan.visited.push('someid');
-    assert.equal(true, dbscan.isVisited('someid'));
-    dbscan.visited.pop();
-    assert.equal(false, dbscan.isVisited('someid'));
   });
 
 });

@@ -1,4 +1,6 @@
 node_modules/
 summarizer/api_keys.json
+aggregator/test.js
+aggregator/articles.json
 conf.json
 .DS_Store

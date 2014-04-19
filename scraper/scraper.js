@@ -71,7 +71,7 @@ var scrape = function (cb) {
 var parseArticles = function (cb) {
   console.log('parsing', queue.length, 'articles');
 
-  async.eachLimit(queue, 10, function (url, done) {
+  async.eachLimit(queue, 15, function (url, done) {
     request(url)
       .on('error', function (err) {
         console.error(err);
@@ -125,7 +125,7 @@ module.exports = {
       parseArticles
     ], 
     function (err, result) {
-      console.log(name, '\n>>>> done');
+      console.log(name, '\n>>>> done', new Date());
       cb(err, 'done');
     });
   }

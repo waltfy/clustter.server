@@ -29,7 +29,7 @@ var models = {
 
 // initialise clustter
 function init () {
-  console.log(process.title, '\n========');
+  console.log(process.title, new Date(), '\n========');
   initModules();
   if (argv.cleandb || argv.c)
     cleanDB(run); // -cleandb or c

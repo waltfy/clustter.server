@@ -1,85 +1,115 @@
-var DBScan = function (args) {
-  if (typeof args.data === 'undefined') console.error(Error('No data provided.'));
-  if (typeof args.eps === 'undefined') args.eps = 0.5;
-  if (typeof args.minPoints === 'undefined') args.minPoints = 2;
-  if (Object.keys(args.data).length === 0) console.error(Error('No articles found'));
+var data = {}, // data to be clustered
+    eps = 0.5, // distance radius between points
+    minPoints = 2; // minimum points necessary to create a cluster
 
-  obj = Object.create(DBScan.prototype);
+var matrix = {},
+    clusters = {},
+    visited = []; // list of document keys that have been visited
 
-  obj.data = args.data;
-  obj.eps = args.eps;
-  obj.minPoints = args.minPoints;
-  obj.visited = [];
-  obj.clusters = {};
-
-  return obj;
-};
-
-DBScan.prototype.run = function (callback) {
-  // initialising and timing run
-  console.log('running DBScan...');
-  var start = new Date().getTime();
+/** Private: Interface to run the clustering process.
+  * benchmark - boolean, based on environment
+  returns void. */
+function start (benchmark) {
+  console.log('running dbscan...');
+  if (benchmark) var start = new Date().getTime();
   var c = 0;
+  computeDistanceMatrix();
 
-  for (var article in this.data) {
-    if (!this.isVisited(article)) { // only articles that haven't been visited
-      this.visited.push(article); // mark as visited
+  for (var doc in data) {
+    if (!isVisited(doc)) {
+      visited.push(doc); // mark as visited
 
-      var neighbours = this.getNeighbours(article); // get articles neighbours
-
-      if (neighbours.length >= this.minPoints) {
+      var neighbours = getNeighbours(doc);
+      
+      if (neighbours.length >= minPoints) {
+        // console.log(doc, '\'s neighbours:');
+        // console.log('>>>>', neighbours);
+        // console.log('==========\n');
         c++;
-        this.expandCluster(article, neighbours, c); // expands cluster
+        expandCluster(doc, neighbours, c);
       }
     }
   }
 
-  var end = new Date().getTime();
-  console.log('>>>> completed in', (end - start) + 'ms.');
-  callback(null, this.clusters);
-};
+  var time = (benchmark) ? ('in ' + (new Date().getTime() - start) + 'ms.') : '';
+  console.log('>>>> finished dbscan', time);
+}
 
-DBScan.prototype.isVisited = function (doc) {
-  return (this.visited.indexOf(doc) !== -1) ? true : false;
-};
+/** Private: Computes the similarity matrix for all documents
+  returns void. */
+function computeDistanceMatrix () {
+  console.log('computing distance matrix...');
+  for (var i in data) {
+    matrix[i] = {};
 
-DBScan.prototype.expandCluster = function (p, neighbours, c) {
-  // this.clusters[c] = [p]; // adding document p to cluster c
-  for (n in neighbours) {
-    if (!this.isVisited(neighbours[n])) {
-      this.visited.push(neighbours[n]);
-      var neighboursNew = this.getNeighbours(neighbours[n]); // what about these neighbours, should be marked as visited?
-      this.visited = this.visited.concat(neighboursNew); // TODO: A BETTER SOLUTION, DISCUSS WITH STEVEN...
-      if (neighboursNew.length >= this.minPoints)
-        neighbours = this.merge(neighbours, neighboursNew);
+    for (var j in data) {
+      if (i === j) {
+        matrix[i][j] = 1; // totally similar
+      } else if (typeof matrix[j] !== 'undefined' && matrix[j].hasOwnProperty(i)) {
+        matrix[i][j] = matrix[j][i];
+      } else {
+        matrix[i][j] = Math.cosineSimilarity(data[i].vector, data[j].vector);
+      }
     }
   }
+  console.log('>>>> done');
+}
 
-  this.clusters[c] = neighbours;
-};
+/** Private: Expands and creates cluster
+  p - String, document cluster is based on
+  neighbours - Array, neighbours of this document
+  c - Number, cluster id
+  returns void.
+  */
+function expandCluster (p, neighbours, c) {
+  neighbours.forEach(function (n) {
+    if (!isVisited(n)) {
+      visited.push(n); // mark neighbour as visited
+      var neighboursNew = getNeighbours(n);
+      visited = visited.concat(neighboursNew); // TODO: A BETTER SOLUTION, DISCUSS WITH STEVEN...
+      if (neighboursNew.length >= minPoints)
+        neighbours = merge(neighbours, neighboursNew);
+    }
+  });
 
-DBScan.prototype.getNeighbours = function (a) {
-  var self = this;
+  clusters[c] = neighbours;
+}
+
+/** Private: Searches the matrix for neighbours within eps range
+  a - String, target documents
+  returns Array of neighbours of `a`.
+  */
+function getNeighbours (a) {
   var neighbours = [];
-
-  for (var b in this.data) {
-    if (a === b) continue;
-    if (Math.cosineSimilarity(this.data[a].vector, this.data[b].vector) > (1 - self.eps))
+  
+  for (var b in matrix[a])
+    if (matrix[a][b] > (1 - eps) && matrix[a][b] < 1)
       neighbours.push(b);
-  }
 
   return neighbours;
-};
+}
 
-DBScan.prototype.merge = function (a, b) {
+/** Private: Checks whether element has been visited.
+	*	e - The element to be checked.
+	*	returns a boolean, true if visited, false otherwise. */
+function isVisited (e) {
+	return (visited.indexOf(e) !== -1) ? true : false;
+}
 
+
+/** Private: Merges two arrays avoiding duplication
+  a - Array
+  b - Array
+  returns Array merged.
+  */
+function merge (a, b) {
   b.forEach(function (doc) {
     if (a.indexOf(doc) === -1)
       a.push(doc);
   });
 
   return a;
-};
+}
 
 Math.dotProduct = function (v1, v2) {
   var dot = 0,
@@ -105,4 +135,12 @@ Math.cosineSimilarity = function (v1, v2) {
   else return result;
 };
 
-module.exports = DBScan;
+module.exports = {
+	run: function (args, cb) {
+    if (typeof args.data !== 'undefined') data = args.data;
+    if (typeof args.eps !== 'undefined' && args.eps.constructor === Number) eps = args.eps; 
+    if (typeof args.minPoints !== 'undefined' && args.minPoints.constructor === Number) args = args.minPoints;
+    start((process.env.NODE_ENV !== 'production') ? true : false);
+    cb(null, clusters);
+	}
+};
