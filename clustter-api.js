@@ -20,11 +20,11 @@ if (cluster.isMaster) {
 
   var port = 5000;
 
-  //var allowCrossDomain = function(req, res, next) {
+  // var allowCrossDomain = function (req, res, next) {
   //  res.header('Access-Control-Allow-Origin', '*');
   //  res.header('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS');
   //  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, Content-Length, X-Requested-With');
-  //
+  
   //  // intercept OPTIONS method
   //  if ('OPTIONS' == req.method) {
   //    res.send(200);
@@ -32,8 +32,8 @@ if (cluster.isMaster) {
   //  else {
   //    next();
   //  }
-  //};
-  //api.use(allowCrossDomain);
+  // };
+  // api.use(allowCrossDomain);
 
   // opening database connection
   DB.on('error', console.error.bind(console, 'database error.'));
@@ -47,10 +47,14 @@ if (cluster.isMaster) {
 
   var getFeed = function () {
     var time = getQueryTime();
-    story.find({ updated: { $lt: time.lt, $gt: time.gt } }).lean().exec(function (err, stories) {
-      cachedStories = stories;
-    });
+    story
+      .find({ updated: { $lt: time.lt, $gt: time.gt } })
+      .lean()
+      .exec(function (err, stories) {
+        cachedStories = stories;
+      });
   };
+
 
   var getQueryTime = function () {
     var now = new Date(),

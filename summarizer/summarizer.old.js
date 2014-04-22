@@ -1,22 +1,19 @@
 // dependencies
-var API_KEYS = require('./api_keys.json'), // static file containing keys
-    tiglegen = require('titlegen'),
-    twitter = require('twitter'),
+var async = require('async'),
+    summaryTool = require('sum'), // require('node-summary');
+    titleGen = require('titlegen'),
     request = require('request'),
-    cosine = require('cosine'),
-    async = require('async'),
-    sum = require('sum');
+    api_keys = require('./api_keys.json'), // static file containing keys
+    twitter = require('twitter'),
+    tweet = new twitter({
+      consumer_key: api_keys.twitter.consumer_key,
+      consumer_secret: api_keys.twitter.consumer_secret,
+      access_token_key: api_keys.twitter.access_token_key,
+      access_token_secret: api_keys.twitter.access_token_secret
+    });
 
-// twitter client configuration
-var tweet = new twitter({
-  consumer_key: API_KEYS.twitter.consumer_key,
-  consumer_secret: API_KEYS.twitter.consumer_secret,
-  access_token_key: API_KEYS.twitter.access_token_key,
-  access_token_secret: API_KEYS.twitter.access_token_secret
-});
-
-var name = 'summarizer',
-    self = this;
+var name = 'summarizer';
+var self = this;
 
 /** Private: Retrievs clusters from database */
 var getClusters = function (cb) {
@@ -34,26 +31,30 @@ var summarizeClusters = function (clusters, cb) {
 };
 
 var createStory = function (cluster, cb) {
-  var story = new self.models.story;
-  var summary = [];
-  var titles = [];
+  var content = [], titles = [],
+      story = new self.models.story;
 
-  // extraction of relevant sentences
+  // iterate through each article to acquire references, titles and content.
   cluster.articles.forEach(function (article) {
     story.refs.push(article.url);
     titles.push(article.title);
-    summary = summary.concat(sum({ corpus: article.story, nSentences: 5 }).sentences);
+    if (content.indexOf(article.story) === -1)
+      content.push(article.story);
   });
+
+  // concatenate content
+  content = content.join(' ');
 
   // title generation
   titlegen.feed(titles);
   if (titles.length > 1) story.title = titlegen();
   if (story.title === '' || story.title === undefined) story.title = titles[0];
 
-  story.content = removeRedundancy(summary); // setting the content of the story
+  // content summarization
+  story.content = summaryTool({ corpus: content, nSentences: 5 }).sentences;
 
   // category acquired via an api then finally save story
-  request('http://uclassify.com/browse/mvazquez/News Classifier/ClassifyText?readkey=' + API_KEYS.classifier.read + '&text=' + encodeURI(story.content.join('  ')) + '&output=json&version=1.01', function (err, res, body) {
+  request('http://uclassify.com/browse/mvazquez/News Classifier/ClassifyText?readkey=' + api_keys.classifier.read + '&text=' + encodeURI(story.content.join('  ')) + '&output=json&version=1.01', function (err, res, body) {
     var response, category;
     try {
       response = JSON.parse(body);
@@ -75,21 +76,6 @@ var createStory = function (cluster, cb) {
       });
     }
   });
-};
-
-var removeRedundancy = function (summary) {
-  summary.forEach(function (sentence) {
-    for (var next in summary) {
-      var redundant = summary[next];
-      if (sentence === redundant) continue;
-      else {
-        var similarity = cosine(sentence.split(/\s/), redundant.split(/\s/));
-        if (similarity > 0.4)
-          summary.splice(summary.indexOf(redundant), 1);
-      }
-    }
-  });
-  return summary;
 };
 
 var tweetStatus = function (stories, cb) {
