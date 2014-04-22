@@ -5,6 +5,7 @@ var API_KEYS = require('./api_keys.json'), // static file containing keys
     request = require('request'),
     cosine = require('cosine'),
     async = require('async'),
+    topSentences = require('node-summary'),
     sum = require('sum');
 
 // twitter client configuration
@@ -42,7 +43,7 @@ var createStory = function (cluster, cb) {
   cluster.articles.forEach(function (article) {
     story.refs.push(article.url);
     titles.push(article.title);
-    summary = summary.concat(sum({ corpus: article.story, nSentences: 5 }).sentences);
+    summary = summary.concat(sum({ corpus: article.story, nSentences: 2 }).sentences);
   });
 
   // title generation
@@ -52,7 +53,7 @@ var createStory = function (cluster, cb) {
 
   story.content = removeRedundancy(summary); // setting the content of the story
 
-  // category acquired via an api then finally save story
+  // classifier access via api, finally saving the story
   request('http://uclassify.com/browse/mvazquez/News Classifier/ClassifyText?readkey=' + API_KEYS.classifier.read + '&text=' + encodeURI(story.content.join('  ')) + '&output=json&version=1.01', function (err, res, body) {
     var response, category;
     try {
@@ -61,7 +62,8 @@ var createStory = function (cluster, cb) {
     
       for (var c in response.cls1)
         categories.push([c, response.cls1[c]]);
-      categories.sort(function(a, b) {return b[1] - a[1]});
+
+      categories.sort(function (a, b) {return b[1] - a[1]});
 
       story.category = ((categories[0][0] === 'US') ? 'UK & Others' : categories[0][0]);
 
