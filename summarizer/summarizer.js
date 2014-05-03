@@ -16,10 +16,10 @@ var tweet = new twitter({
   access_token_secret: API_KEYS.twitter.access_token_secret
 });
 
-var name = 'summarizer',
-    self = this;
+var name = 'summarizer', // module name
+    self = this; // referencing this safely
 
-/** Private: Retrievs clusters from database */
+// private: Retrievs clusters from database
 var getClusters = function (cb) {
   self.models.cluster
     .find({})
@@ -28,14 +28,17 @@ var getClusters = function (cb) {
     .exec(cb);
 };
 
+// private: summarises each cluster into a story
 var summarizeClusters = function (clusters, cb) {
   async.each(clusters, createStory, function (err) {
     cb(err, clusters.length);
   });
 };
 
+// private: composes the story
 var createStory = function (cluster, cb) {
   var story = new self.models.story;
+  var text = '';
   var summary = [];
   var titles = [];
 
@@ -43,7 +46,7 @@ var createStory = function (cluster, cb) {
   cluster.articles.forEach(function (article) {
     story.refs.push(article.url);
     titles.push(article.title);
-    summary = summary.concat(sum({ corpus: article.story, nSentences: 2 }).sentences);
+    text += article.story;
   });
 
   // title generation
@@ -51,7 +54,7 @@ var createStory = function (cluster, cb) {
   if (titles.length > 1) story.title = titlegen();
   if (story.title === '' || story.title === undefined) story.title = titles[0];
 
-  story.content = removeRedundancy(summary); // setting the content of the story
+  story.content = removeRedundancy(sum({corpus: text, nSentences: 5}).sentences); // setting the content of the story
 
   // classifier access via api, finally saving the story
   request('http://uclassify.com/browse/mvazquez/News Classifier/ClassifyText?readkey=' + API_KEYS.classifier.read + '&text=' + encodeURI(story.content.join('  ')) + '&output=json&version=1.01', function (err, res, body) {
@@ -79,6 +82,7 @@ var createStory = function (cluster, cb) {
   });
 };
 
+// private: performs novelty detection on each phrase
 var removeRedundancy = function (summary) {
   summary.forEach(function (sentence) {
     for (var next in summary) {
@@ -94,6 +98,7 @@ var removeRedundancy = function (summary) {
   return summary;
 };
 
+// private: responsible for tweeting at the completion of summarisation
 var tweetStatus = function (stories, cb) {
   if (process.env.NODE_ENV !== 'production') return cb();
   var message = 'New story feed available with ' + stories + ' new stories - http://www.clustter.in. #clustter';
@@ -104,6 +109,7 @@ var tweetStatus = function (stories, cb) {
     });
 };
 
+// public
 module.exports = {
   init: function (models) {
     self.models = models;

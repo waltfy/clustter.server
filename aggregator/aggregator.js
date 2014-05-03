@@ -24,7 +24,7 @@ var computeDictionary = function (cb) {
     .lean()
     .exec(function (err, articles) {
       async.each(articles, function (article, done) {
-        for (word in article.wordFrequency)
+        for (var word in article.wordFrequency)
           (dictionary[word]) ? dictionary[word] += 1 : dictionary[word] = 1;  
         done();
       }, function (err) {

@@ -114,7 +114,7 @@ Math.dotProduct = function (v1, v2) {
   var dot = 0,
       min = (Object.keys(v1).length <= Object.keys(v2).length) ? v1 : v2; // selecting the smaller vector
 
-  for (word in min)
+  for (var word in min)
     dot += (v1[word] || 0) * (v2[word] || 0); // if `v1[word]` or `v2[word]` is not present, just set it to 0.
 
   return dot;
