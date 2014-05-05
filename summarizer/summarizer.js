@@ -5,7 +5,7 @@ var API_KEYS = require('./api_keys.json'), // static file containing keys
     request = require('request'),
     cosine = require('cosine'),
     async = require('async'),
-    topSentences = require('node-summary'),
+    // topSentences = require('node-summary'),
     sum = require('sum');
 
 // twitter client configuration
